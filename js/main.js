@@ -1,83 +1,110 @@
-// "named" imports from utils.js and soundutils.js
 import WaveformDrawer from './waveformdrawer.js';
 import TrimbarsDrawer from './trimbarsdrawer.js';
-// "named" imports from utils.js and soundutils.js
 import { loadAndDecodeSound, playSound } from './soundutils.js';
 import { pixelToSeconds } from './utils.js';
 
-const soundURLs = [
-   'https://upload.wikimedia.org/wikipedia/commons/a/a3/Hardstyle_kick.wav',
-   'https://upload.wikimedia.org/wikipedia/commons/transcoded/c/c7/Redoblante_de_marcha.ogg/Redoblante_de_marcha.ogg.mp3',
-   'https://upload.wikimedia.org/wikipedia/commons/transcoded/c/c9/Hi-Hat_Cerrado.ogg/Hi-Hat_Cerrado.ogg.mp3',
-   'https://upload.wikimedia.org/wikipedia/commons/transcoded/0/07/Hi-Hat_Abierto.ogg/Hi-Hat_Abierto.ogg.mp3',
-   'https://upload.wikimedia.org/wikipedia/commons/transcoded/3/3c/Tom_Agudo.ogg/Tom_Agudo.ogg.mp3',
-   'https://upload.wikimedia.org/wikipedia/commons/transcoded/a/a4/Tom_Medio.ogg/Tom_Medio.ogg.mp3',
-   'https://upload.wikimedia.org/wikipedia/commons/transcoded/8/8d/Tom_Grave.ogg/Tom_Grave.ogg.mp3',
-   'https://upload.wikimedia.org/wikipedia/commons/transcoded/6/68/Crash.ogg/Crash.ogg.mp3',
-   'https://upload.wikimedia.org/wikipedia/commons/transcoded/2/24/Ride.ogg/Ride.ogg.mp3'
-]
+const URL_endpoint = "http://localhost:3000/api/presets";
 
-// Array to store decoded audio buffers
-let decodedSounds = [];
+const fetchData = async () => {
+  try {
+    const data = await fetch(URL_endpoint);
+    const response = await data.json();
+    return response;
+  } catch (error) {
+    console.error('Error fetching data:', error);
+  }
+};
 
 let canvas, canvasOverlay;
 let waveformDrawer, trimbarsDrawer;
-let mousePos = { x: 0, y: 0 }
+let mousePos = { x: 0, y: 0 };
 
 window.onload = async function init() {
   const ctx = new AudioContext();
+  const presets = await fetchData();
 
   canvas = document.querySelector("#myCanvas");
   canvasOverlay = document.querySelector("#myCanvasOverlay");
 
   waveformDrawer = new WaveformDrawer();
   trimbarsDrawer = new TrimbarsDrawer(canvasOverlay, 100, 200);
-  
-  
-  const soundContainer = document.querySelector("#buttonsContainer"); // Conteneur pour les divs
+
+  const soundContainer = document.querySelector(".container");
 
   try {
-    // Charger et décoder tous les sons en parallèle
-    const promises = soundURLs.map(async (url) => await loadAndDecodeSound(url, ctx));
-    decodedSounds = await Promise.all(promises);
-  
+    if (!presets || presets.length === 0)
+      throw new Error('No presets found');
 
-    // Créer un div pour chaque son
-    decodedSounds.forEach((decodedSound, index) => {
-
-      const playButton = document.createElement("button");
-      playButton.textContent = `${soundURLs[index].split('/').pop().replace(/\.(wav|ogg|mp3|ogg\.mp3)$/, '')}`; // Nom du fichier
-      
-      playButton.onclick = (evt) => {
-        waveformDrawer.init(decodedSounds[index], canvas, '#83E83E');
-        waveformDrawer.clear();
-        waveformDrawer.drawWave(0, canvas.height);
-
-        let start = pixelToSeconds(trimbarsDrawer.leftTrimBar.x, decodedSound.duration, canvas.width);
-        let end = pixelToSeconds(trimbarsDrawer.rightTrimBar.x, decodedSound.duration, canvas.width);
-        
-        console.log("start: " + start + " end: " + end);        
-        playSound(ctx, decodedSounds[index], start, end); 
-        
-      };
-      soundContainer.appendChild(playButton);
-
+    // 🎛️ Create dropdown
+    const select = document.createElement("select");
+    select.id = "presetSelect";
+    presets.forEach(preset => {
+      const option = document.createElement("option");
+      option.value = preset.name;
+      option.textContent = preset.name;
+      select.appendChild(option);
     });
+    soundContainer.appendChild(select);
+
+    // 🟩 Container for buttons
+    const buttonsContainer = document.createElement("div");
+    buttonsContainer.id = "buttonsContainer";
+    soundContainer.appendChild(buttonsContainer);
+
+    // 🧠 Cache decoded buffers
+    const decodedBuffers = {};
+
+    // When a preset is selected
+    select.addEventListener("change", async () => {
+      const selectedPreset = presets.find(p => p.name === select.value);
+      if (!selectedPreset) return;
+
+      buttonsContainer.innerHTML = ''; // clear previous buttons
+
+      // Decode all sounds in the selected preset
+      const promises = selectedPreset.samples.map(async (sample) => {
+        sample.url = `http://localhost:3000/presets/${sample.url}`;
+        const decoded = await loadAndDecodeSound(sample.url, ctx);
+        return { name: sample.name, buffer: decoded };
+      });
+
+      const decodedSounds = await Promise.all(promises);
+      decodedBuffers[selectedPreset.name] = decodedSounds;
+
+      // 🎵 Create buttons for each sample
+      decodedSounds.forEach(({ name, buffer }) => {
+        const playButton = document.createElement("button");
+        playButton.textContent = name;
+
+        playButton.onclick = () => {
+          waveformDrawer.init(buffer, canvas, '#83E83E');
+          waveformDrawer.clear();
+          waveformDrawer.drawWave(0, canvas.height);
+
+          const start = pixelToSeconds(trimbarsDrawer.leftTrimBar.x, buffer.duration, canvas.width);
+          const end = pixelToSeconds(trimbarsDrawer.rightTrimBar.x, buffer.duration, canvas.width);
+
+          playSound(ctx, buffer, start, end);
+        };
+
+        buttonsContainer.appendChild(playButton);
+      });
+    });
+
+    // Trigger default selection
+    select.dispatchEvent(new Event('change'));
+
+    // Mouse events for trimbars
     canvasOverlay.onmousemove = (evt) => {
       let rect = canvas.getBoundingClientRect();
+      mousePos.x = evt.clientX - rect.left;
+      mousePos.y = evt.clientY - rect.top;
+      trimbarsDrawer.moveTrimBars(mousePos);
+    };
 
-        mousePos.x = (evt.clientX - rect.left);
-        mousePos.y = (evt.clientY - rect.top);
-        trimbarsDrawer.moveTrimBars(mousePos);
-    }
+    canvasOverlay.onmousedown = () => trimbarsDrawer.startDrag();
+    canvasOverlay.onmouseup = () => trimbarsDrawer.stopDrag();
 
-    canvasOverlay.onmousedown = (evt) => {
-        trimbarsDrawer.startDrag();
-    }
-
-    canvasOverlay.onmouseup = (evt) => {
-        trimbarsDrawer.stopDrag();
-    }
     requestAnimationFrame(animate);
   } catch (error) {
     console.error('Erreur lors du chargement ou du décodage des fichiers audio :', error);
@@ -85,7 +112,7 @@ window.onload = async function init() {
 };
 
 function animate() {
-    trimbarsDrawer.clear();
-    trimbarsDrawer.draw();
-    requestAnimationFrame(animate);
+  trimbarsDrawer.clear();
+  trimbarsDrawer.draw();
+  requestAnimationFrame(animate);
 }
