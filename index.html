@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Load a sound sample using fetch, decode it and play it using Web Audio</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- type="module" is necessary if the main.js file is using import / export (aka ES/JS modules)
+     Try removing it and see what happens in the debug console! -->
+    <script src="js/main.js" type="module" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <h1>Load a sound sample using fetch, decode it and play it using Web Audio</H1>
+    <p>The button below will be enabled when the sound is loaded. The download of the sound starts as soon as the page
+        is being loaded.</p>
+    
+
+    <p> Try clicking rapidly on the button. </p>
+
+    <div id="buttonsContainer"></div>
+    <br> <br>  
+
+    <div class="wrapper">
+        <canvas id="myCanvas" width="600" height="100"></canvas>
+        <canvas id="myCanvasOverlay" width="600" height="100"></canvas>
+    </div>
+</body>
+
+</html>
