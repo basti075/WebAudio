@@ -13,18 +13,8 @@ import { pixelToSeconds } from './utils.js';
 // The AudioContext object is the main "entry point" into the Web Audio API
 let ctx;
 
-const soundURLs = [
-    'https://upload.wikimedia.org/wikipedia/commons/a/a3/Hardstyle_kick.wav',
-    'https://upload.wikimedia.org/wikipedia/commons/transcoded/c/c7/Redoblante_de_marcha.ogg/Redoblante_de_marcha.ogg.mp3',
-    'https://upload.wikimedia.org/wikipedia/commons/transcoded/c/c9/Hi-Hat_Cerrado.ogg/Hi-Hat_Cerrado.ogg.mp3',
-    'https://upload.wikimedia.org/wikipedia/commons/transcoded/0/07/Hi-Hat_Abierto.ogg/Hi-Hat_Abierto.ogg.mp3',
-    'https://upload.wikimedia.org/wikipedia/commons/transcoded/3/3c/Tom_Agudo.ogg/Tom_Agudo.ogg.mp3',
-    'https://upload.wikimedia.org/wikipedia/commons/transcoded/a/a4/Tom_Medio.ogg/Tom_Medio.ogg.mp3',
-    'https://upload.wikimedia.org/wikipedia/commons/transcoded/8/8d/Tom_Grave.ogg/Tom_Grave.ogg.mp3',
-    'https://upload.wikimedia.org/wikipedia/commons/transcoded/6/68/Crash.ogg/Crash.ogg.mp3',
-    'https://upload.wikimedia.org/wikipedia/commons/transcoded/2/24/Ride.ogg/Ride.ogg.mp3'
-];
-let decodedSounds = [];
+// Base URL of the REST API (Seance2/ExampleRESTEndpoint[Corrige]) — will be auto-detected
+let API_BASE = 'http://localhost:3000';
 let buttonsContainer = document.querySelector('#buttonsContainer');
 let currentIndex = 0; // which sound is selected for waveform/trim playback
 
@@ -57,40 +47,60 @@ class Sound {
     }
 }
 
-// Replace soundURLs with an array of Sound objects
-const sounds = soundURLs.map(url => new Sound(url));
+// Active sounds for the currently selected preset
+let sounds = [];
 
-window.onload = async function init() {
-    ctx = new AudioContext();
+// UI elements for presets
+const presetSelect = document.querySelector('#presetSelect');
+const presetStatus = document.querySelector('#presetStatus');
 
-    // two canvas : one for drawing the waveform, the other for the trim bars
-    canvas = document.querySelector("#myCanvas");
-    canvasOverlay = document.querySelector("#myCanvasOverlay");
+function resolveSampleUrl(u) {
+    // Absolute URL: keep as-is
+    if (/^https?:\/\//i.test(u)) return u;
+    // Already under /presets
+    if (u.startsWith('/presets/')) return `${API_BASE}${encodeURI(u)}`;
+    // Relative like "./808/file.wav" -> "/presets/808/file.wav"
+    const trimmed = u.replace(/^\.\//, '');
+    return `${API_BASE}/presets/${encodeURI(trimmed)}`;
+}
 
-    // create the waveform drawer and the trimbars drawer
-    waveformDrawer = new WaveformDrawer();
-    trimbarsDrawer = new TrimbarsDrawer(canvasOverlay, 0, canvas.length);
-
-    // Load and decode all sounds in parallel
-    await Promise.all(
-        sounds.map(async sound => {
+async function loadAndDecodeAll() {
+    const results = await Promise.allSettled(
+        sounds.map(async (sound) => {
             const buffer = await loadAndDecodeSound(sound.url, ctx);
             sound.setBuffer(buffer);
+            return sound;
         })
     );
+    const failed = results.filter(r => r.status === 'rejected');
+    if (failed.length) {
+        console.warn(`Failed to load ${failed.length} sample(s)`, failed);
+    }
+    // Keep only successfully decoded sounds
+    sounds = sounds.filter(s => !!s.buffer);
+    return { ok: sounds.length > 0, failed: failed.length };
+}
 
-    // Initialize waveform with the first decoded buffer
+function rebuildButtonsAndWaveform() {
+    if (!sounds.length || !sounds[0].buffer) {
+        if (presetStatus) presetStatus.textContent = 'No decodable samples available.';
+        buttonsContainer.innerHTML = '';
+        if (waveformDrawer && waveformDrawer.canvas) waveformDrawer.clearCanvas();
+        return;
+    }
+    // Initialize waveform with first sound
     currentIndex = 0;
     const initialBuffer = sounds[currentIndex].buffer;
+    waveformDrawer.clearCanvas();
     waveformDrawer.init(initialBuffer, canvas, '#e83ee8ff');
     waveformDrawer.drawWave(0, canvas.height);
 
-    // Set the trim bars to their default positions for the first sound
+    // Apply default trim bars for first sound
     const { left, right } = sounds[currentIndex].getTrimBars();
     trimbarsDrawer.leftTrimBar.x = left;
     trimbarsDrawer.rightTrimBar.x = right;
 
-    // Create one button per sound to play it and update the waveform
+    // Build buttons
     buttonsContainer.innerHTML = '';
     sounds.forEach((sound, i) => {
         const btn = document.createElement('button');
@@ -99,11 +109,9 @@ window.onload = async function init() {
         btn.style.marginRight = '0.5rem';
 
         btn.onclick = async () => {
-            if (ctx.state === 'suspended') {
-                await ctx.resume();
-            }
+            if (ctx.state === 'suspended') await ctx.resume();
 
-            // Save current trim bar positions
+            // Save trim bars for current
             const currentSound = sounds[currentIndex];
             currentSound.saveTrimBars(trimbarsDrawer.leftTrimBar.x, trimbarsDrawer.rightTrimBar.x);
 
@@ -116,7 +124,7 @@ window.onload = async function init() {
             waveformDrawer.init(buffer, canvas, '#e83ee8ff');
             waveformDrawer.drawWave(0, canvas.height);
 
-            // Restore trim bar positions for the selected sound
+            // Restore trim bars
             const { left, right } = selectedSound.getTrimBars();
             trimbarsDrawer.leftTrimBar.x = left;
             trimbarsDrawer.rightTrimBar.x = right;
@@ -129,6 +137,90 @@ window.onload = async function init() {
 
         buttonsContainer.appendChild(btn);
     });
+}
+
+async function fetchAndPopulatePresets() {
+    try {
+        presetStatus.textContent = 'Loading presets...';
+        const res = await fetch(`${API_BASE}/api/presets`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const presets = await res.json();
+        if (!Array.isArray(presets) || presets.length === 0) throw new Error('No presets');
+
+        // Fill dropdown
+        presetSelect.innerHTML = '';
+        presets.forEach((p, idx) => {
+            const opt = document.createElement('option');
+            opt.value = p.name;
+            opt.textContent = p.name;
+            if (idx === 0) opt.selected = true;
+            presetSelect.appendChild(opt);
+        });
+
+        // Build sounds from first preset
+        const first = presets[0];
+        sounds = (first.samples || [])
+            .filter(s => s && s.url)
+            .map(s => new Sound(resolveSampleUrl(s.url)));
+
+        {
+            const { ok, failed } = await loadAndDecodeAll();
+            rebuildButtonsAndWaveform();
+            presetStatus.textContent = ok
+                ? `Loaded ${presets.length} preset(s)${failed ? ` • ${failed} failed` : ''}`
+                : 'Preset has no decodable samples';
+        }
+
+        // Handle changes
+        presetSelect.onchange = async () => {
+            const name = presetSelect.value;
+            const p = presets.find(x => x.name === name);
+            if (!p) return;
+            // Reset sounds for this preset
+            sounds = (p.samples || [])
+                .filter(s => s && s.url)
+                .map(s => new Sound(resolveSampleUrl(s.url)));
+            presetStatus.textContent = 'Loading samples...';
+            const { ok, failed } = await loadAndDecodeAll();
+            rebuildButtonsAndWaveform();
+            presetStatus.textContent = ok
+                ? `Preset "${name}" ready${failed ? ` • ${failed} failed` : ''}`
+                : `Preset "${name}" has no decodable samples`;
+        };
+    } catch (err) {
+        console.error('Failed to fetch presets:', err);
+        presetStatus.textContent = 'Presets unavailable, using built-in samples';
+        // Fallback to a small default list
+        const fallback = [
+            'https://upload.wikimedia.org/wikipedia/commons/a/a3/Hardstyle_kick.wav',
+            'https://upload.wikimedia.org/wikipedia/commons/transcoded/c/c7/Redoblante_de_marcha.ogg/Redoblante_de_marcha.ogg.mp3'
+        ];
+        sounds = fallback.map(u => new Sound(u));
+        const { ok, failed } = await loadAndDecodeAll();
+        rebuildButtonsAndWaveform();
+        if (presetStatus) {
+            presetStatus.textContent = ok
+                ? `Using built-in samples${failed ? ` • ${failed} failed` : ''}`
+                : 'Built-in samples unavailable';
+        }
+    }
+}
+
+window.onload = async function init() {
+    ctx = new AudioContext();
+
+    // two canvas : one for drawing the waveform, the other for the trim bars
+    canvas = document.querySelector("#myCanvas");
+    canvasOverlay = document.querySelector("#myCanvasOverlay");
+
+    // create the waveform drawer and the trimbars drawer
+    waveformDrawer = new WaveformDrawer();
+    trimbarsDrawer = new TrimbarsDrawer(canvasOverlay, 0, canvas.width);
+
+    // Detect API base (try multiple candidates) before fetching presets
+    await detectApiBase();
+    // Fetch presets and initialize UI
+    await fetchAndPopulatePresets();
 
     // declare mouse event listeners for ajusting the trim bars
     canvasOverlay.onmousemove = (evt) => {
@@ -170,6 +262,32 @@ function animate() {
 
     // redraw in 1/60th of a second
     requestAnimationFrame(animate);
+}
+
+// Try multiple API endpoints to find a reachable server with CORS enabled
+async function detectApiBase() {
+    const candidates = [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:3001',
+        'http://127.0.0.1:3001',
+    ];
+    for (const url of candidates) {
+        try {
+            const controller = new AbortController();
+            const t = setTimeout(() => controller.abort(), 1500);
+            const r = await fetch(`${url}/api/health`, { signal: controller.signal });
+            clearTimeout(t);
+            if (r.ok) {
+                API_BASE = url;
+                if (presetStatus) presetStatus.textContent = `API detected at ${API_BASE}`;
+                return;
+            }
+        } catch (_) {
+            // try next
+        }
+    }
+    if (presetStatus) presetStatus.textContent = 'Presets unavailable, using built-in samples';
 }
 
 
