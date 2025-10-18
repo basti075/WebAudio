@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -13,6 +14,11 @@
     <h1>Load a sound sample using fetch, decode it and play it using Web Audio</H1>
     <p>The button below will be enabled when the sound is loaded. The download of the sound starts as soon as the page
         is being loaded.</p>
+    <div style="margin: 0.5rem 0;">
+        <label for="presetSelect">Preset:</label>
+        <select id="presetSelect"></select>
+        <span id="presetStatus" style="margin-left: 0.5rem; font-size: 0.9rem; color: #666;"></span>
+    </div>
     <div id="buttonsContainer" style="margin-top: 1rem;"></div>
 
     Try clicking rapidly on the button.

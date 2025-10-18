@@ -32,6 +32,13 @@ export default class WaveformDrawer {
         this.getPeaks();
     }
 
+    // Clear the entire canvas area
+    clearCanvas() {
+        if (!this.canvas) return;
+        const ctx = this.canvas.getContext('2d');
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
     max(values) {
         let max = -Infinity;
         for (let i = 0, len = values.length; i < len; i++) {
@@ -55,7 +62,9 @@ export default class WaveformDrawer {
         let width = this.displayWidth;
         // Compute the coefficient for scaling the peaks (values between -1 and 1)
         // after this conversion, the peaks will be between -height/2 and height/2
-        let coef = height / (2 * this.max(this.peaks));
+        const maxPeak = this.max(this.peaks);
+        const safeMax = (maxPeak && isFinite(maxPeak) && maxPeak > 0) ? maxPeak : 1; // avoid division by 0
+        let coef = height / (2 * safeMax);
 
         let halfH = height / 2;
 
@@ -73,7 +82,7 @@ export default class WaveformDrawer {
 
         // first draw the upper part of the waveform
         for (let i = 0; i < width; i++) {
-            let h = Math.round(this.peaks[i] * coef);
+            const h = Math.round(this.peaks[i] * coef);
             ctx.lineTo(i, halfH + h);
         }
         ctx.lineTo(width, halfH);
@@ -82,7 +91,7 @@ export default class WaveformDrawer {
         ctx.moveTo(0, halfH);
 
         for (let i = 0; i < width; i++) {
-            let h = Math.round(this.peaks[i] * coef);
+            const h = Math.round(this.peaks[i] * coef);
             ctx.lineTo(i, halfH - h);
         }
 
@@ -91,11 +100,6 @@ export default class WaveformDrawer {
         ctx.fill();
 
         ctx.restore();
-    }
-
-    clearCanvas() {
-        const ctx = this.canvas.getContext('2d');
-        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
     // Builds an array of peaks for drawing
@@ -120,6 +124,7 @@ export default class WaveformDrawer {
         // But Math.floor(-4.9) is -5
         // So be careful, here sampleSize is always positive so we can use ~~
         this.sampleStep = this.sampleStep || ~~(sampleSize / 10);
+        if (this.sampleStep < 1) this.sampleStep = 1; // avoid infinite loops on very short buffers
 
         // An audio sample can be stereo or mono, we average the peaks of each channel
         let channels = buffer.numberOfChannels;
@@ -127,35 +132,25 @@ export default class WaveformDrawer {
         // The result is an array of size equal to the displayWidth
         this.peaks = new Float32Array(this.displayWidth);
 
-        // For each channel
-        for (let c = 0; c < channels; c++) {
-            // get the sample data for this channel
-            // a channel sample data is a Float32Array with values between -1 and 1
-            let chan = buffer.getChannelData(c);
-
-            // For each column in the canvas
-            for (let i = 0; i < this.displayWidth; i++) {
-                // compute the start and end of the block of samples that will
-                // be used to compute the peak for this column
-                let start = ~~(i * sampleSize);
-                let end = start + sampleSize;
-                // find the peak in this block of samples
-                // the peak is the maximum of the absolute values of the samples
+        // For each column in the canvas, compute peak across all channels
+        for (let i = 0; i < this.displayWidth; i++) {
+            let start = ~~(i * sampleSize);
+            let end = start + sampleSize;
+            // Clamp to channel length later per channel
+            let sumPeaks = 0;
+            for (let c = 0; c < channels; c++) {
+                const chan = buffer.getChannelData(c);
+                const clen = chan.length;
+                const e = end > clen ? clen : end;
                 let peak = 0;
-                for (let j = start; j < end; j += this.sampleStep) {
-                    let value = chan[j];
-                    if (value > peak) {
-                        peak = value;
-                    } else if (-value > peak) {
-                        peak = -value;
-                    }
+                for (let j = start; j < e; j += this.sampleStep) {
+                    const v = chan[j] || 0;
+                    const abs = v < 0 ? -v : v;
+                    if (abs > peak) peak = abs;
                 }
-                if (c > 1) {
-                    this.peaks[i] += peak / channels;
-                } else {
-                    this.peaks[i] = peak / channels;
-                }
+                sumPeaks += peak;
             }
+            this.peaks[i] = sumPeaks / channels;
         }
     }
 }
