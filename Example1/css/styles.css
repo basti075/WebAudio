@@ -1,0 +1,22 @@
+.wrapper {
+    position: relative;
+    width: 400px;
+    height: 300px;
+}
+
+.wrapper canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+#myCanvas {
+  border: 1px solid black;
+  background-color:black;
+  z-index:0;
+}
+
+#myCanvasOverlay {
+  border:1px solid red;
+  position: absolute;
+  z-index:10;
+}
