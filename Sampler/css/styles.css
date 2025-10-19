@@ -1,0 +1,155 @@
+/* Assignment Sampler Final styles */
+:root {
+    --accent: #83E83E;
+    --bg: #0b0b0b;
+    --fg: #eaeaea;
+    --muted: #666;
+    --pad-min: 90px;
+    --pad-gap: 10px;
+}
+
+* {
+    box-sizing: border-box
+}
+
+body {
+    font-family: system-ui, Segoe UI, Arial, sans-serif;
+    background: #111;
+    color: var(--fg);
+    margin: 0;
+    padding: 16px
+}
+
+h1 {
+    margin: 0 0 12px
+}
+
+.toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px
+}
+
+.toolbar .status {
+    color: var(--muted)
+}
+
+.sampler {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start
+}
+
+.pads {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(var(--pad-min), 1fr));
+    gap: var(--pad-gap);
+    flex: 0 0 380px;
+    max-width: 45vw
+}
+
+.pad {
+    background: #1a1a1a;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+    aspect-ratio: 1/1;
+    display: flex;
+    align-items: center;
+    justify-content: center
+}
+
+.pad:hover {
+    border-color: #444
+}
+
+.pad.active {
+    border-color: var(--accent)
+}
+
+.pad .name {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.9rem;
+    color: #ccc
+}
+
+.visualizer {
+    margin-top: 0;
+    flex: 1;
+    min-width: 420px
+}
+
+.canvas-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    overflow: auto
+}
+
+canvas {
+    display: block;
+    background: var(--bg);
+    border: 1px solid #444;
+    width: 100%;
+    height: auto
+}
+
+#waveOverlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: transparent
+}
+
+.wam {
+    margin-top: 18px
+}
+
+/* Responsive: smaller pads on very small screens to keep 4 across */
+@media (max-width: 700px) {
+    :root {
+        --pad-min: 80px;
+        --pad-gap: 10px;
+    }
+
+    .pad {
+        padding: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    :root {
+        --pad-min: 72px;
+        --pad-gap: 8px;
+    }
+
+    .pad {
+        padding: 8px;
+    }
+
+    .pad .name {
+        font-size: 0.8rem;
+    }
+}
+
+/* Stack on very small screens */
+@media (max-width: 900px) {
+    .sampler {
+        flex-direction: column;
+    }
+
+    .visualizer {
+        min-width: 0;
+    }
+
+    .pads {
+        max-width: 100%;
+    }
+}
