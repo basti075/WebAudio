@@ -1,36 +1,29 @@
-// About imports and exports in JavaScript modules
-// see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules
-// and https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import
-// and https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export
-
-// default imports of classes from waveformdrawer.js and trimbarsdrawer.js
+// imports
 import WaveformDrawer from './waveformdrawer.js';
 import TrimbarsDrawer from './trimbarsdrawer.js';
-// "named" imports from utils.js and soundutils.js
 import { loadAndDecodeSound, playSound } from './soundutils.js';
 import { pixelToSeconds } from './utils.js';
 
-// The AudioContext object is the main "entry point" into the Web Audio API
+// audio context
 let ctx;
 
 // Base URL of the REST API (Seance2/ExampleRESTEndpoint[Corrige]) — will be auto-detected
 let API_BASE = 'http://localhost:3000';
 let buttonsContainer = document.querySelector('#buttonsContainer');
-let currentIndex = 0; // which sound is selected for waveform/trim playback
+let currentIndex = 0; // selected sound index
 
 let canvas, canvasOverlay;
-// waveform drawer is for drawing the waveform in the canvas
-// trimbars drawer is for drawing the trim bars in the overlay canvas
+// drawers: waveform + trim overlay
 
 let waveformDrawer, trimbarsDrawer;
 let mousePos = { x: 0, y: 0 }
 
-// Define a Sound class to encapsulate sound-related data and methods
+// Sound model
 class Sound {
     constructor(url) {
         this.url = url;
-        this.buffer = null; // Decoded audio buffer
-        this.trimBars = { left: 100, right: 200 }; // Default trim bar positions
+        this.buffer = null;
+        this.trimBars = { left: 100, right: 200 };
     }
 
     setBuffer(buffer) {
@@ -47,10 +40,10 @@ class Sound {
     }
 }
 
-// Active sounds for the currently selected preset
+// active sounds
 let sounds = [];
 
-// UI elements for presets
+// presets UI
 const presetSelect = document.querySelector('#presetSelect');
 const presetStatus = document.querySelector('#presetStatus');
 
@@ -76,7 +69,7 @@ async function loadAndDecodeAll() {
     if (failed.length) {
         console.warn(`Failed to load ${failed.length} sample(s)`, failed);
     }
-    // Keep only successfully decoded sounds
+    // keep only decodable sounds
     sounds = sounds.filter(s => !!s.buffer);
     return { ok: sounds.length > 0, failed: failed.length };
 }
@@ -88,19 +81,19 @@ function rebuildButtonsAndWaveform() {
         if (waveformDrawer && waveformDrawer.canvas) waveformDrawer.clearCanvas();
         return;
     }
-    // Initialize waveform with first sound
+    // init waveform with first sound
     currentIndex = 0;
     const initialBuffer = sounds[currentIndex].buffer;
     waveformDrawer.clearCanvas();
     waveformDrawer.init(initialBuffer, canvas, '#e83ee8ff');
     waveformDrawer.drawWave(0, canvas.height);
 
-    // Apply default trim bars for first sound
+    // apply default trims for first sound
     const { left, right } = sounds[currentIndex].getTrimBars();
     trimbarsDrawer.leftTrimBar.x = left;
     trimbarsDrawer.rightTrimBar.x = right;
 
-    // Build buttons
+    // build buttons
     buttonsContainer.innerHTML = '';
     sounds.forEach((sound, i) => {
         const btn = document.createElement('button');
@@ -111,7 +104,7 @@ function rebuildButtonsAndWaveform() {
         btn.onclick = async () => {
             if (ctx.state === 'suspended') await ctx.resume();
 
-            // Save trim bars for current
+            // save current trims
             const currentSound = sounds[currentIndex];
             currentSound.saveTrimBars(trimbarsDrawer.leftTrimBar.x, trimbarsDrawer.rightTrimBar.x);
 
@@ -124,7 +117,7 @@ function rebuildButtonsAndWaveform() {
             waveformDrawer.init(buffer, canvas, '#e83ee8ff');
             waveformDrawer.drawWave(0, canvas.height);
 
-            // Restore trim bars
+            // restore trims
             const { left, right } = selectedSound.getTrimBars();
             trimbarsDrawer.leftTrimBar.x = left;
             trimbarsDrawer.rightTrimBar.x = right;
@@ -147,7 +140,7 @@ async function fetchAndPopulatePresets() {
         const presets = await res.json();
         if (!Array.isArray(presets) || presets.length === 0) throw new Error('No presets');
 
-        // Fill dropdown
+        // fill dropdown
         presetSelect.innerHTML = '';
         presets.forEach((p, idx) => {
             const opt = document.createElement('option');
@@ -157,7 +150,7 @@ async function fetchAndPopulatePresets() {
             presetSelect.appendChild(opt);
         });
 
-        // Build sounds from first preset
+        // build sounds from first preset
         const first = presets[0];
         sounds = (first.samples || [])
             .filter(s => s && s.url)
@@ -171,7 +164,7 @@ async function fetchAndPopulatePresets() {
                 : 'Preset has no decodable samples';
         }
 
-        // Handle changes
+        // handle changes
         presetSelect.onchange = async () => {
             const name = presetSelect.value;
             const p = presets.find(x => x.name === name);
@@ -190,7 +183,7 @@ async function fetchAndPopulatePresets() {
     } catch (err) {
         console.error('Failed to fetch presets:', err);
         presetStatus.textContent = 'Presets unavailable, using built-in samples';
-        // Fallback to a small default list
+        // fallback list
         const fallback = [
             'https://upload.wikimedia.org/wikipedia/commons/a/a3/Hardstyle_kick.wav',
             'https://upload.wikimedia.org/wikipedia/commons/transcoded/c/c7/Redoblante_de_marcha.ogg/Redoblante_de_marcha.ogg.mp3'
@@ -209,58 +202,52 @@ async function fetchAndPopulatePresets() {
 window.onload = async function init() {
     ctx = new AudioContext();
 
-    // two canvas : one for drawing the waveform, the other for the trim bars
+    // canvases: waveform + overlay
     canvas = document.querySelector("#myCanvas");
     canvasOverlay = document.querySelector("#myCanvasOverlay");
 
-    // create the waveform drawer and the trimbars drawer
+    // drawers
     waveformDrawer = new WaveformDrawer();
     trimbarsDrawer = new TrimbarsDrawer(canvasOverlay, 0, canvas.width);
 
-    // Detect API base (try multiple candidates) before fetching presets
+    // detect API then fetch presets
     await detectApiBase();
-    // Fetch presets and initialize UI
     await fetchAndPopulatePresets();
 
-    // declare mouse event listeners for ajusting the trim bars
+    // trim bar events
     canvasOverlay.onmousemove = (evt) => {
-        // get the mouse position in the canvas
+        // mouse position in canvas
         let rect = canvas.getBoundingClientRect();
 
         mousePos.x = (evt.clientX - rect.left);
         mousePos.y = (evt.clientY - rect.top);
 
-        // When the mouse moves, we check if we are close to a trim bar
-        // if so: move it!
+        // move selected bar if close
         trimbarsDrawer.moveTrimBars(mousePos);
     };
 
     canvasOverlay.onmousedown = (evt) => {
-        // If a trim bar is close to the mouse position, we start dragging it
+        // start drag if close
         trimbarsDrawer.startDrag();
     };
 
     canvasOverlay.onmouseup = (evt) => {
-        // We stop dragging the trim bars (if they were being dragged)
+        // stop dragging
         trimbarsDrawer.stopDrag();
     };
 
-    // start the animation loop for drawing the trim bars
+    // start loop
     requestAnimationFrame(animate);
 };
 
-// Animation loop for drawing the trim bars
-// We use requestAnimationFrame() to call the animate function
-// at a rate of 60 frames per second (if possible)
-// see https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame
+// draw loop (requestAnimationFrame)
 function animate() {
-    // clear overlay canvas;
+    // clear overlay
     trimbarsDrawer.clear();
 
-    // draw the trim bars
+    // draw trims
     trimbarsDrawer.draw();
 
-    // redraw in 1/60th of a second
     requestAnimationFrame(animate);
 }
 

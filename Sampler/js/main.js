@@ -2,8 +2,9 @@ import WaveformDrawer from './waveformdrawer.js';
 import TrimbarsDrawer from './trimbarsdrawer.js';
 import { SamplerEngine } from './samplerEngine.js';
 import { SamplerGUI } from './samplerGUI.js';
+import { MidiManager } from './midi.js';
 
-// API auto-detection for local dev server
+// API base
 const API_CANDIDATES = ['http://localhost:3000', 'http://127.0.0.1:3000'];
 let API_BASE = API_CANDIDATES[0];
 
@@ -20,15 +21,40 @@ async function detectApiBase() {
             const r = await fetch(`${url}/api/health`);
             if (r.ok) { API_BASE = url; return; }
         } catch {
-            // ignore, try next candidate
+            // try next
         }
     }
 }
 
-async function loadBuffer(url, ctx) {
+async function downloadArrayBufferWithProgress(url, onProgress) {
     const res = await fetch(url);
-    const ab = await res.arrayBuffer();
-    return await ctx.decodeAudioData(ab);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const total = Number(res.headers.get('Content-Length')) || 0;
+    if (!res.body) return await res.arrayBuffer();
+    const reader = res.body.getReader();
+    const chunks = [];
+    let received = 0;
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.byteLength;
+        if (onProgress && total) onProgress(received / total);
+    }
+    const size = chunks.reduce((s, c) => s + c.byteLength, 0);
+    const ab = new Uint8Array(size);
+    let offset = 0;
+    for (const c of chunks) { ab.set(c, offset); offset += c.byteLength; }
+    return ab.buffer;
+}
+
+async function loadBuffer(url, ctx, onProgress) {
+    const ab = await downloadArrayBufferWithProgress(url, p => onProgress && onProgress(Math.max(0, Math.min(0.9, p * 0.9))));
+    // decode (last 10%)
+    onProgress && onProgress(0.95);
+    const decoded = await ctx.decodeAudioData(ab);
+    onProgress && onProgress(1);
+    return decoded;
 }
 
 class Sound {
@@ -41,7 +67,7 @@ class Sound {
     }
 }
 
-// Persist trims per sample URL
+// Trim storage per URL
 const TRIMS_KEY = 'assignmentSampler.trims.v1';
 function loadAllTrims() {
     try { return JSON.parse(localStorage.getItem(TRIMS_KEY) || '{}'); }
@@ -74,17 +100,19 @@ window.addEventListener('load', async () => {
     const wf = new WaveformDrawer();
     const tr = new TrimbarsDrawer(waveOverlay, 100, 300);
     const engine = new SamplerEngine(ctx);
-    // Route engine to destination (WAM removed)
+    // route audio
     try { engine.routeOnce(ctx.destination); } catch { /* ignore */ }
     const sounds = [];
-    // MIDI state
-    let midiAccess = null, currentMidiInput = null;
+    // MIDI
+    const midi = new MidiManager();
 
     resumeBtn.onclick = async () => { if (ctx.state === 'suspended') await ctx.resume(); };
 
     await detectApiBase();
 
-    // WAM removed: engine outputs directly to destination
+    // pad font
+    document.documentElement.style.setProperty('--pad-font', "'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace");
+
 
     async function fetchPresets() {
         const r = await fetch(`${API_BASE}/api/presets`);
@@ -129,18 +157,7 @@ window.addEventListener('load', async () => {
     async function buildFromPreset(p) {
         status.textContent = `Loading "${p.name}"...`;
         const list = soundsFromPreset(p);
-        const results = await Promise.allSettled(list.map(async (s, idx) => {
-            s.buffer = await loadBuffer(s.url, ctx);
-            s.ready = !!s.buffer;
-            if (s.ready && gui) gui.setReady(idx, true);
-            return s;
-        }));
-        const ok = results.filter(r => r.status === 'fulfilled').length;
-        sounds.splice(0, sounds.length, ...list.filter(s => s.ready));
-        engine.setBuffers(sounds.map(s => s.buffer));
-        status.textContent = ok ? `Preset "${p.name}" ready (${ok}/${list.length})` : `Preset "${p.name}" has no decodable samples`;
-
-        // GUI
+        // build GUI (show progress per pad)
         gui = new SamplerGUI(padsRoot, waveCanvas, waveOverlay, tr, (i) => {
             gui.selectPad(i);
             const buf = sounds[i].buffer;
@@ -151,14 +168,29 @@ window.addEventListener('load', async () => {
             tr.left = sounds[i].trim.left; tr.right = sounds[i].trim.right;
             const { start, duration } = gui.currentSelection(buf);
             sounds[i].trim = { left: tr.left, right: tr.right };
-            // persist trim for this sample URL
+            // save trim
             saveTrimForUrl(sounds[i].url, tr.left, tr.right);
             engine.play(i, start, duration);
         });
-        gui.buildPads(sounds);
-        // Mark pads that already decoded
-        sounds.forEach((s, i) => { if (s.buffer) gui.setReady(i, true); });
-        // If we have at least one decoded buffer, auto-select and draw it so the waveform is visible immediately
+        gui.buildPads(list);
+        // load with progress
+        sounds.splice(0, sounds.length, ...list);
+        const results = await Promise.allSettled(list.map(async (s, idx) => {
+            try {
+                gui.setBusy(idx, true); gui.setProgress(idx, 0);
+                s.buffer = await loadBuffer(s.url, ctx, p => gui.setProgress(idx, p));
+                s.ready = !!s.buffer;
+                if (s.ready) gui.setReady(idx, true);
+                return s;
+            } catch (e) {
+                gui.setBusy(idx, false); gui.setProgress(idx, 0);
+                throw e;
+            }
+        }));
+        const ok = results.filter(r => r.status === 'fulfilled').length;
+        engine.setBuffers(sounds.map(s => s.buffer));
+        status.textContent = ok ? `Preset "${p.name}" ready (${ok}/${list.length})` : `Preset "${p.name}" has no decodable samples`;
+        // auto-select first decoded buffer for visible waveform
         const firstIdx = sounds.findIndex(s => !!s.buffer);
         if (firstIdx >= 0) {
             gui.selectPad(firstIdx);
@@ -167,14 +199,14 @@ window.addEventListener('load', async () => {
             syncCanvasSizeAndRedraw();
             tr.left = sounds[firstIdx].trim.left; tr.right = sounds[firstIdx].trim.right;
         } else {
-            // Still sync sizes to be ready for the first click
+            // still sync sizes for first click
             syncCanvasSizeAndRedraw();
         }
     }
-    // Initial clear; actual drawing happens after first buffer is available
+    // initial clear
     wf.clearCanvas();
 
-    // hook play selection
+    // play selection
     playSelectionBtn.onclick = () => {
         const active = padsRoot.querySelector('.pad.active');
         if (!active) return;
@@ -184,7 +216,7 @@ window.addEventListener('load', async () => {
         engine.play(idx, start, duration);
     };
 
-    // presets dropdown
+    // presets
     try {
         const presets = await fetchPresets();
         presetSelect.innerHTML = '';
@@ -204,7 +236,7 @@ window.addEventListener('load', async () => {
         status.textContent = 'API unavailable; please start server in Seance2/ExampleRESTEndpointCorrige';
     }
 
-    // overlay animation
+    // overlay draw loop
     function animate() {
         tr.clear();
         tr.draw();
@@ -212,7 +244,7 @@ window.addEventListener('load', async () => {
     }
     requestAnimationFrame(animate);
 
-    // Redraw waveform when the wrapper resizes for accurate peaks with responsive canvas
+    // resize-aware redraw
     if ('ResizeObserver' in window && canvasWrapper) {
         const ro = new ResizeObserver(() => { syncCanvasSizeAndRedraw(); });
         ro.observe(canvasWrapper);
@@ -220,17 +252,27 @@ window.addEventListener('load', async () => {
         window.addEventListener('resize', syncCanvasSizeAndRedraw);
     }
 
-    // Load All button: decode all sounds in current preset
+    // load all samples
     loadAllBtn.onclick = async () => {
         if (!sounds.length) return;
         loadAllBtn.disabled = true; globalStatus.textContent = 'Loading…';
-        const results = await Promise.allSettled(sounds.map(async (s, i) => { if (s.buffer) return s; s.buffer = await loadBuffer(s.url, ctx); s.ready = !!s.buffer; if (s.ready && gui) gui.setReady(i, true); return s; }));
+        const results = await Promise.allSettled(sounds.map(async (s, i) => {
+            if (s.buffer) return s;
+            try {
+                gui.setBusy(i, true); gui.setProgress(i, 0);
+                s.buffer = await loadBuffer(s.url, ctx, p => gui.setProgress(i, p));
+                s.ready = !!s.buffer; if (s.ready && gui) gui.setReady(i, true);
+                return s;
+            } finally {
+                gui.setBusy(i, false);
+            }
+        }));
         const ok = results.filter(r => r.status === 'fulfilled').length;
         globalStatus.textContent = `Done (${ok}/${sounds.length})`;
         setTimeout(() => { globalStatus.textContent = ''; loadAllBtn.disabled = false; }, 1200);
     };
 
-    // Persist trims after user finishes dragging (on mouseup)
+    // save trims on mouseup
     window.addEventListener('mouseup', () => {
         if (currentIndex >= 0 && sounds[currentIndex]) {
             sounds[currentIndex].trim = { left: tr.left, right: tr.right };
@@ -238,44 +280,46 @@ window.addEventListener('load', async () => {
         }
     });
 
-    // MIDI enable + selection
-    midiEnableBtn.onclick = async () => {
-        if (!('requestMIDIAccess' in navigator)) { midiStatus.textContent = 'Web MIDI not supported'; return; }
-        try {
-            midiAccess = await navigator.requestMIDIAccess();
-            midiStatus.textContent = 'MIDI enabled';
-            populateMidiInputs();
-            midiInputSel.disabled = false;
-            midiAccess.onstatechange = populateMidiInputs;
-        } catch { midiStatus.textContent = 'MIDI access denied'; }
-    };
+    // MIDI mapping C2→pads
+    const BASE_NOTE = 36; // C2
+    const ORDER = [12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3];
 
     function populateMidiInputs() {
         const selected = midiInputSel.value;
         midiInputSel.innerHTML = '';
-        if (!midiAccess) return;
-        const inputs = Array.from(midiAccess.inputs.values());
+        const inputs = midi.getInputs();
         if (!inputs.length) { midiInputSel.innerHTML = '<option>(none)</option>'; midiInputSel.disabled = true; return; }
-        for (const input of inputs) { const opt = document.createElement('option'); opt.value = input.id; opt.textContent = input.name || input.id; midiInputSel.appendChild(opt); }
+        for (const i of inputs) { const opt = document.createElement('option'); opt.value = i.id; opt.textContent = i.name; midiInputSel.appendChild(opt); }
         const toSel = Array.from(midiInputSel.options).find(o => o.value === selected) || midiInputSel.options[0];
         if (toSel) toSel.selected = true;
-        bindSelectedMidiInput();
+        if (toSel) { midi.selectInput(toSel.value); midiStatus.textContent = `Input: ${toSel.textContent} (C2→pads)`; }
+        midiInputSel.disabled = false;
     }
 
-    midiInputSel.addEventListener('change', bindSelectedMidiInput);
-    const BASE_NOTE = 36; // C2
-    const ORDER = [12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3];
-    function bindSelectedMidiInput() {
-        if (!midiAccess) return;
-        if (currentMidiInput) currentMidiInput.onmidimessage = null;
+    midi.on('statechange', populateMidiInputs);
+
+    midi.on('noteon', ({ note, velocity }) => {
+        const off = note - BASE_NOTE;
+        if (off < 0 || off > 15) return;
+        const padIndex = ORDER[off];
+        const btn = padsRoot.querySelectorAll('.pad')[padIndex];
+        if (btn) btn.click();
+    });
+
+    midiEnableBtn.onclick = async () => {
+        try {
+            await midi.enable();
+            midiStatus.textContent = 'MIDI enabled';
+            populateMidiInputs();
+        } catch (e) {
+            midiStatus.textContent = (e && e.message) ? e.message : 'MIDI access failed';
+        }
+    };
+
+    midiInputSel.addEventListener('change', () => {
         const id = midiInputSel.value;
-        const input = Array.from(midiAccess.inputs.values()).find(i => i.id === id);
-        if (!input) { midiStatus.textContent = 'MIDI input not found'; return; }
-        input.onmidimessage = (ev) => {
-            const [status, note, velocity] = ev.data; const cmd = status & 0xf0;
-            if (cmd === 0x90 && velocity > 0) { const off = note - BASE_NOTE; if (off < 0 || off > 15) return; const padIndex = ORDER[off]; const btn = padsRoot.querySelectorAll('.pad')[padIndex]; if (btn) btn.click(); }
-        };
-        currentMidiInput = input;
-        midiStatus.textContent = `Input: ${input.name || input.id} (C2→pads)`;
-    }
+        midi.selectInput(id);
+        const opt = midiInputSel.selectedOptions[0];
+        if (opt) midiStatus.textContent = `Input: ${opt.textContent} (C2→pads)`;
+    });
 });

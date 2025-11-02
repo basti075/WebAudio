@@ -1,4 +1,4 @@
-/* Assignment Sampler Final styles */
+/* Styles */
 :root {
     --accent: #83E83E;
     --bg: #0b0b0b;
@@ -6,6 +6,7 @@
     --muted: #666;
     --pad-min: 90px;
     --pad-gap: 10px;
+    --pad-font: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 }
 
 * {
@@ -62,7 +63,11 @@ h1 {
     aspect-ratio: 1/1;
     display: flex;
     align-items: center;
-    justify-content: center
+    justify-content: center;
+    position: relative;
+    font-family: var(--pad-font);
+    font-weight: 700;
+    letter-spacing: 0.2px;
 }
 
 .pad:hover {
@@ -76,20 +81,46 @@ h1 {
 .pad .name {
     display: block;
     margin-top: 6px;
-    font-size: 0.9rem;
-    color: #ccc
+    font-size: 0.95rem;
+    color: #ddd;
+    font-weight: 700;
+}
+
+/* Pad loading bar */
+.pad .progress {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    height: 6px;
+    border-radius: 4px;
+    background: #2a2a2a;
+    overflow: hidden;
+    display: block;
+}
+
+.pad .progress .bar {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width .15s ease-out;
 }
 
 .visualizer {
     margin-top: 0;
-    flex: 1;
-    min-width: 420px
+    /* Visualizer width */
+    flex: 0 0 500px;
+    /* fixed width */
+    min-width: 500px;
+    max-width: 500px;
 }
 
 .canvas-wrapper {
     position: relative;
-    width: 100%;
-    max-width: 100%;
+    /* Canvas wrapper */
+    width: 500px;
+    max-width: 500px;
+    margin: 0;
     overflow: auto
 }
 
@@ -112,7 +143,16 @@ canvas {
     margin-top: 18px
 }
 
-/* Responsive: smaller pads on very small screens to keep 4 across */
+.font-preview {
+    margin-top: 8px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 6px;
+    font-size: 14px;
+    color: #bbb;
+}
+
+/* Responsive tweaks */
 @media (max-width: 700px) {
     :root {
         --pad-min: 80px;
@@ -139,17 +179,7 @@ canvas {
     }
 }
 
-/* Stack on very small screens */
-@media (max-width: 900px) {
-    .sampler {
-        flex-direction: column;
-    }
-
-    .visualizer {
-        min-width: 0;
-    }
-
-    .pads {
-        max-width: 100%;
-    }
+/* Layout: side-by-side with horizontal scroll if needed */
+.sampler {
+    overflow-x: auto;
 }

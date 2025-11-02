@@ -5,10 +5,8 @@ function distance(x1, y1, x2, y2) {
     return Math.sqrt(x * x + y * y);
 }
 
-// Convert a position in pixels in the canvas to a time in seconds in the audio buffer
+// pixels -> seconds
 function pixelToSeconds(x, bufferDuration, canvasWidth) {
-    // canvas.width -> bufferDuration
-    // x -> result
     let result = x * bufferDuration / canvasWidth;
     return result;
 }

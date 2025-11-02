@@ -1,15 +1,4 @@
-// ABOUT HOW TO DRAW AND ANIMATE IN AN HTML CANVAS
-// You can follow the MOOC "HTML Coding Essentials and Best Practices" 
-// at W3cx.org, by Michel Buffa, Modules 3 and 4 (drawing and animation)
-// https://www.edx.org/learn/html5/the-world-wide-web-consortium-w3c-html5-coding-essentials-and-best-practices
-
-// A class for drawing a waveform in a canvas
-// It needs the decoded audio buffer and a canvas
-// It builds an array of peaks for drawing the waveform
-// The sampleStep parameter is optional, it is used to speed up the computation of the peaks
-// by skipping samples. If not provided, it will be set to a tenth of sampleSize in getPeaks()
-// sampleSize is the number of samples used to compute a single peak
-// see getPeaks() method for more details
+// Waveform canvas renderer
 export default class WaveformDrawer {
     decodedAudioBuffer;
     peaks;

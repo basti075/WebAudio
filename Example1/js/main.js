@@ -1,12 +1,7 @@
-// About imports and exports in JavaScript modules
-// see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules
-// and https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import
-// and https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export
-
-// "named" imports from utils.js and soundutils.js
+// imports
 import { loadAndDecodeSound, playSound } from './soundutils.js';
 
-// The AudioContext object is the main "entry point" into the Web Audio API
+// audio context
 let ctx;
 
 const soundURLs = [
@@ -23,15 +18,14 @@ const soundURLs = [
 let decodedSounds = [];
 let buttonsContainer = document.querySelector('#buttonsContainer');
 
-// The button for playing the sound
+// play button
 const playButton = document.querySelector("#playButton");
-// disable the button until the sound is loaded and decoded (if it exists)
 if (playButton) {
     playButton.disabled = true;
 }
 
 window.onload = async function init() {
-    // Ensure we have a container for per-sound buttons even if it wasn't in the HTML
+    // container for per-sound buttons
     if (!buttonsContainer) {
         buttonsContainer = document.createElement('div');
         buttonsContainer.id = 'buttonsContainer';
@@ -41,8 +35,7 @@ window.onload = async function init() {
     ctx = new AudioContext();
 
 
-    // Load and decode all sounds concurrently using Promise.all
-    // Each URL is processed by loadAndDecodeSound, which returns a decoded AudioBuffer
+    // decode all sounds
     decodedSounds = await Promise.all(
         soundURLs.map(url => loadAndDecodeSound(url, ctx))
     );
@@ -52,7 +45,7 @@ window.onload = async function init() {
         playButton.disabled = false;
     }
 
-    // Create one button per sound
+    // one button per sound
     buttonsContainer.innerHTML = '';
     soundURLs.forEach((url, i) => {
         const btn = document.createElement('button');
@@ -60,7 +53,7 @@ window.onload = async function init() {
         btn.textContent = `Play: ${decodeURIComponent(label)}`;
         btn.style.marginRight = '0.5rem';
         btn.onclick = async () => {
-            // Some browsers require a user interaction to resume audio context
+            // resume context if needed
             if (ctx.state === 'suspended') {
                 await ctx.resume();
             }
@@ -71,13 +64,12 @@ window.onload = async function init() {
         buttonsContainer.appendChild(btn);
     });
 
-    // Event listener for the button. When the button is pressed, we play the first sound
+    // main button plays first sound
     if (playButton) {
         playButton.onclick = async function (evt) {
             if (ctx.state === 'suspended') {
                 await ctx.resume();
             }
-            // From soundutils.js; play the first decoded buffer for demo purposes
             const buffer = decodedSounds[0];
             if (!buffer) return;
             playSound(ctx, buffer, 0, buffer.duration);

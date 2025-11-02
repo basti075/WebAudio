@@ -21,7 +21,7 @@ export default class TrimbarsDrawer {
         this.ctx = canvas.getContext('2d');
     }
 
-    // Clear the canvas
+    // clear
     clear() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
@@ -29,10 +29,10 @@ export default class TrimbarsDrawer {
     draw() {
         let ctx = this.ctx;
 
-        // Good practice: always save the context state before drawing
+        // save ctx
         ctx.save();
 
-        // two vertical lines
+        // lines
         ctx.lineWidth = 2;
 
         ctx.strokeStyle = this.leftTrimBar.color;
@@ -57,7 +57,7 @@ export default class TrimbarsDrawer {
         ctx.lineTo(this.leftTrimBar.x, 16);
         ctx.fill();
 
-        // tiangle end
+        // triangle end
         ctx.beginPath();
         ctx.fillStyle = this.rightTrimBar.color;
         ctx.moveTo(this.rightTrimBar.x, -0);
@@ -65,21 +65,20 @@ export default class TrimbarsDrawer {
         ctx.lineTo(this.rightTrimBar.x, 16);
         ctx.fill();
 
-        // We draw grey transparent rectangles before leftTrimBar and after rightTrimBar
+        // grey masks before/after
         ctx.fillStyle = "rgba(128, 128, 128, 0.7)"
         ctx.fillRect(0, 0, this.leftTrimBar.x, this.canvas.height);
         ctx.fillRect(this.rightTrimBar.x, 0, this.canvas.width, this.canvas.height);
 
-        // Good practice: always restore the context state after drawing
+        // restore ctx
         ctx.restore();
     }
 
     highLightTrimBarsWhenClose(mousePos) {
-        // compute distance between mousePos and left trim pos
+        // distance to left
         let d = distance(mousePos.x, mousePos.y, this.leftTrimBar.x + 5, 4);
 
-        // If we are close to a trim bar and the other trim bar is not selected, 
-        // we change its color and set its selected property to true
+        // highlight if close (only one at a time)
         if ((d < 10) && (!this.rightTrimBar.selected)) {
             this.leftTrimBar.color = "red";
             this.leftTrimBar.selected = true;
@@ -88,7 +87,7 @@ export default class TrimbarsDrawer {
             this.leftTrimBar.selected = false;
         }
 
-        // same for the right trim bar
+        // right bar
         d = distance(mousePos.x, mousePos.y, this.rightTrimBar.x - 5, 4);
         if ((d < 10) && (!this.leftTrimBar.selected)) {
             this.rightTrimBar.color = "red";
@@ -100,7 +99,7 @@ export default class TrimbarsDrawer {
     }
 
     startDrag() {
-        // if a trim bar is selected, we set its dragged property to true
+        // begin drag
         if (this.leftTrimBar.selected)
             this.leftTrimBar.dragged = true;
 
@@ -109,14 +108,12 @@ export default class TrimbarsDrawer {
     }
 
     stopDrag() {
-        // Called when the mouse is released, we stop dragging the trim bars
-        // if they were being dragged
+        // end drag
         if (this.leftTrimBar.dragged) {
             this.leftTrimBar.dragged = false;
             this.leftTrimBar.selected = false;
 
-            // We limit the left trim bar to stay on the left of the right trim bar
-            // (sometimes, if the mouse moves too fast, we can be on the right of the right trim bar)
+            // keep left <= right
             if (this.leftTrimBar.x > this.rightTrimBar.x)
                 this.leftTrimBar.x = this.rightTrimBar.x;
         }
@@ -125,8 +122,7 @@ export default class TrimbarsDrawer {
             this.rightTrimBar.dragged = false;
             this.rightTrimBar.selected = false;
 
-            // We limit the right trim bar to stay on the right of the left trim bar
-            // (sometimes, if the mouse moves too fast, we can be on the left of the left trim bar)
+            // keep right >= left
             if (this.rightTrimBar.x < this.leftTrimBar.x)
                 this.rightTrimBar.x = this.leftTrimBar.x;
         }
@@ -134,11 +130,10 @@ export default class TrimbarsDrawer {
 
 
     moveTrimBars(mousePos) {
-        // When the mouse moves, we check if we are close to a trim bar
-        // If so: change its color and set its selected property to true
+        // highlight/move
         this.highLightTrimBarsWhenClose(mousePos);
 
-        // We limit the trim bars to stay in the canvas
+        // keep inside canvas
         if (mousePos.x <= 0) {
             this.leftTrimBar.x = 0;
         }
@@ -147,7 +142,7 @@ export default class TrimbarsDrawer {
         }
 
         if (this.leftTrimBar.dragged) {
-            // We limit the left trim bar to stay on the left of the right trim bar
+            // ensure left <= right
             if (this.leftTrimBar.x < this.rightTrimBar.x)
                 this.leftTrimBar.x = mousePos.x;
             else {
@@ -157,7 +152,7 @@ export default class TrimbarsDrawer {
         }
 
         if (this.rightTrimBar.dragged) {
-            // We limit the right trim bar to stay on the right of the left trim bar
+            // ensure right >= left
             if (this.rightTrimBar.x > this.leftTrimBar.x)
                 this.rightTrimBar.x = mousePos.x;
             else {

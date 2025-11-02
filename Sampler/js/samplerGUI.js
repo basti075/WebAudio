@@ -6,7 +6,7 @@ export class SamplerGUI {
         this.trimbars = trimbars;
         this.onPad = onPad;
         this._activeIndex = -1;
-        this._pads = []; // store pad refs
+        this._pads = [];
     }
 
     buildPads(sounds) {
@@ -18,7 +18,9 @@ export class SamplerGUI {
             div.role = 'button';
             div.tabIndex = 0;
             div.ariaLabel = s.name || 'Sample';
-            div.innerHTML = `<span class="name">${s.name || 'Sample'}</span>`;
+            div.innerHTML = `
+                <div class="progress" aria-hidden="true"><div class="bar"></div></div>
+                <span class="name">${s.name || 'Sample'}</span>`;
             div.addEventListener('click', () => this.onPad(idx));
             div.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -42,6 +44,27 @@ export class SamplerGUI {
         const el = this._pads[index];
         if (!el) return;
         el.classList.toggle('ready', !!ready);
+        if (ready) {
+            el.classList.remove('loading');
+            const bar = el.querySelector('.bar');
+            if (bar) bar.style.width = '100%';
+        }
+    }
+
+    setBusy(index, busy = true) {
+        const el = this._pads[index];
+        if (!el) return;
+        el.classList.toggle('loading', !!busy);
+        if (busy) this.setProgress(index, 0);
+    }
+
+    setProgress(index, fraction) {
+        const el = this._pads[index];
+        if (!el) return;
+        const bar = el.querySelector('.bar');
+        if (!bar) return;
+        const pct = Math.max(0, Math.min(1, Number(fraction) || 0));
+        bar.style.width = (pct * 100).toFixed(1) + '%';
     }
 
     currentSelection(buffer) {

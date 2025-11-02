@@ -5,6 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Sampler</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css" />
     <script type="module" src="js/main.js"></script>
 </head>
@@ -19,22 +20,22 @@
         <button id="playSelection" title="Play the current trim on the selected pad">Play Selection</button>
         <button id="loadAll" title="Download and decode all samples with progress">Load All</button>
         <span class="status" id="globalStatus"></span>
-        <!--<button id="midiEnable" title="Enable Web MIDI input for pads">Enable MIDI</button>
+        <button id="midiEnable" title="Enable Web MIDI input for pads">Enable MIDI</button>
         <label for="midiInput">MIDI Input:</label>
         <select id="midiInput" disabled>
             <option>(none)</option>
         </select>
         <span class="status" id="midiStatus"></span>
-    -->
     </div>
 
     <section class="sampler">
         <div id="pads" class="pads" aria-label="Sampler pads"></div>
         <div class="visualizer">
             <div class="canvas-wrapper">
-                <canvas id="waveCanvas" width="900" height="180" aria-label="Waveform"></canvas>
-                <canvas id="waveOverlay" width="900" height="180" aria-label="Trim overlay"></canvas>
+                <canvas id="waveCanvas" width="500" height="90" aria-label="Waveform"></canvas>
+                <canvas id="waveOverlay" width="500" height="90" aria-label="Trim overlay"></canvas>
             </div>
+
         </div>
 
     </section>
