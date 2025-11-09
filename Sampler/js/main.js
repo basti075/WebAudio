@@ -157,7 +157,7 @@ window.addEventListener('load', async () => {
     async function buildFromPreset(p) {
         status.textContent = `Loading "${p.name}"...`;
         const list = soundsFromPreset(p);
-        // build GUI (show progress per pad)
+        // build GUI 
         gui = new SamplerGUI(padsRoot, waveCanvas, waveOverlay, tr, (i) => {
             gui.selectPad(i);
             const buf = sounds[i].buffer;
