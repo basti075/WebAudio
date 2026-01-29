@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: presets-api
+    env: node
+    plan: free
+    root: ExampleRESTEndpointCorrige
+    buildCommand: npm ci
+    startCommand: npm start
+    envVars:
+      - key: PUBLIC_DIR
+        value: public
+      - key: DATA_DIR
+        value: public/presets
