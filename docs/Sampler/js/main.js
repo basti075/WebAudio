@@ -4,9 +4,8 @@ import { SamplerEngine } from './samplerEngine.js';
 import { SamplerGUI } from './samplerGUI.js';
 import { MidiManager } from './midi.js';
 
-// API base (prefer deployed Render URL first)
-const API_CANDIDATES = ['https://webaudio-22k9.onrender.com', 'http://localhost:3000', 'http://127.0.0.1:3000'];
-let API_BASE = API_CANDIDATES[0];
+
+const API_BASE = 'https://webaudio-22k9.onrender.com';
 
 function resolveUrl(u) {
     if (/^https?:\/\//i.test(u)) return u;
@@ -15,16 +14,6 @@ function resolveUrl(u) {
     return `${API_BASE}/presets/${encodeURI(t)}`;
 }
 
-async function detectApiBase() {
-    for (const url of API_CANDIDATES) {
-        try {
-            const r = await fetch(`${url}/api/health`);
-            if (r.ok) { API_BASE = url; return; }
-        } catch {
-            // try next
-        }
-    }
-}
 
 async function downloadArrayBufferWithProgress(url, onProgress) {
     const res = await fetch(url);
@@ -108,7 +97,7 @@ window.addEventListener('load', async () => {
 
     resumeBtn.onclick = async () => { if (ctx.state === 'suspended') await ctx.resume(); };
 
-    await detectApiBase();
+
 
     // pad font
     document.documentElement.style.setProperty('--pad-font', "'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace");

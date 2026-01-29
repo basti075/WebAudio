@@ -5,6 +5,8 @@
    - Open `WebAudio/ExampleRESTEndpointCorrige` and run  `npm start`.
    - Ensure the endpoint is reachable before using the Sampler UI.
 
+> Note: the REST backend is deployed on Render at https://webaudio-22k9.onrender.com — the Sampler UI can use this URL instead of running a local server.
+
 2. Open the Sampler UI:
    - Open `WebAudio/Sampler/index.html` in a browser.
 
