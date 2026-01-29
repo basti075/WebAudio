@@ -4,8 +4,8 @@ import { SamplerEngine } from './samplerEngine.js';
 import { SamplerGUI } from './samplerGUI.js';
 import { MidiManager } from './midi.js';
 
-// API base
-const API_CANDIDATES = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+// API base (prefer deployed Render URL first)
+const API_CANDIDATES = ['https://webaudio-22k9.onrender.com', 'http://localhost:3000', 'http://127.0.0.1:3000'];
 let API_BASE = API_CANDIDATES[0];
 
 function resolveUrl(u) {
