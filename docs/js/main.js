@@ -102,6 +102,10 @@ window.addEventListener('load', async () => {
     // MIDI
     const midi = new MidiManager();
 
+    // Headless mode detection for automated testing: use ?headless=1 or #headless
+    const urlp = new URLSearchParams(window.location.search);
+    const headlessMode = urlp.get('headless') === '1' || urlp.get('headless') === 'true' || window.location.hash === '#headless';
+
     resumeBtn.onclick = async () => { if (ctx.state === 'suspended') await ctx.resume(); };
 
 
@@ -469,6 +473,38 @@ window.addEventListener('load', async () => {
         if (deleteBtnElem) deleteBtnElem.disabled = isProtectedPreset(presets[0]?.name);
 
         await buildFromPreset(presets[0]);
+        // If running in headless mode, hide UI and run a non-interactive load of all samples.
+        if (headlessMode) {
+            try {
+                const toolbar = document.querySelector('.toolbar'); if (toolbar) toolbar.style.display = 'none';
+                const h1 = document.querySelector('h1'); if (h1) h1.style.display = 'none';
+                // ensure audio resumed
+                if (ctx.state === 'suspended') await ctx.resume();
+                // reuse the same load-all routine
+                if (typeof loadAllBtn.onclick === 'function') {
+                    await loadAllBtn.onclick();
+                } else {
+                    // fallback: manually load buffers
+                    await (async () => {
+                        const results = await Promise.allSettled(sounds.map(async (s, i) => {
+                            if (s.buffer) return s;
+                            try { s.buffer = await loadBuffer(s.url, ctx, p => {}); s.ready = !!s.buffer; return s; }
+                            catch { return s; }
+                        }));
+                        engine.setBuffers(sounds.map(s => s.buffer));
+                    })();
+                }
+                const loaded = sounds.filter(s => !!s.buffer).length;
+                const total = sounds.length;
+                const out = { presets: presets.length, preset: presets[0].name, loaded, total };
+                console.log('HEADLESS_DONE', out);
+                window.__HEADLESS_RESULT = out;
+                window.dispatchEvent(new CustomEvent('headless:done', { detail: out }));
+            } catch (e) {
+                console.error('HEADLESS_ERROR', e);
+                window.__HEADLESS_ERROR = e && e.message ? e.message : String(e);
+            }
+        }
         presetSelect.onchange = async () => {
             const p = presets.find(x => x.name === presetSelect.value);
             if (deleteBtnElem) deleteBtnElem.disabled = isProtectedPreset(presetSelect.value);

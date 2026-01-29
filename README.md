@@ -1,4 +1,8 @@
-# WebSampler - Sampler
+# WebSampler
+
+## Authors
+- Bastian Holzer
+- Stevenson Jules
 
 ## Quick start
 1. Web demo and backend:
@@ -22,7 +26,10 @@
 ## Requirements
  - A browser with Web MIDI API support if you want to use a MIDI controller (e.g., Chrome, Edge).
 
-## Authors
-- Bastian Holzer
-- Stevenson Jules
+## Headless mode
+
+- The UI supports a headless/testing mode that hides the interactive controls and performs a non-interactive load of the first preset and its samples.
+- Enable headless mode by opening the page with the query parameter `?headless=1` (or `?headless=true`) or by appending `#headless` to the URL.
+- When finished the page logs a completion object as `HEADLESS_DONE` in the console, stores the result at `window.__HEADLESS_RESULT`, and dispatches a `headless:done` event.
+- Example link: https://basti075.github.io/WebAudio/?headless=1
 
