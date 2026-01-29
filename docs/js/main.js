@@ -3,48 +3,9 @@ import TrimbarsDrawer from './trimbarsdrawer.js';
 import { SamplerEngine } from './samplerEngine.js';
 import { SamplerGUI } from './samplerGUI.js';
 import { MidiManager } from './midi.js';
-
-
-const API_BASE = 'https://webaudio-22k9.onrender.com';
-
-function resolveUrl(u) {
-    if (/^https?:\/\//i.test(u)) return u;
-    if (u.startsWith('/presets/')) return API_BASE + encodeURI(u);
-    const t = u.replace(/^\.\//, '');
-    return `${API_BASE}/presets/${encodeURI(t)}`;
-}
-
-
-async function downloadArrayBufferWithProgress(url, onProgress) {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const total = Number(res.headers.get('Content-Length')) || 0;
-    if (!res.body) return await res.arrayBuffer();
-    const reader = res.body.getReader();
-    const chunks = [];
-    let received = 0;
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-        received += value.byteLength;
-        if (onProgress && total) onProgress(received / total);
-    }
-    const size = chunks.reduce((s, c) => s + c.byteLength, 0);
-    const ab = new Uint8Array(size);
-    let offset = 0;
-    for (const c of chunks) { ab.set(c, offset); offset += c.byteLength; }
-    return ab.buffer;
-}
-
-async function loadBuffer(url, ctx, onProgress) {
-    const ab = await downloadArrayBufferWithProgress(url, p => onProgress && onProgress(Math.max(0, Math.min(0.9, p * 0.9))));
-    // decode (last 10%)
-    onProgress && onProgress(0.95);
-    const decoded = await ctx.decodeAudioData(ab);
-    onProgress && onProgress(1);
-    return decoded;
-}
+import { API_BASE, resolveUrl, downloadArrayBufferWithProgress, loadBuffer, fetchPresets, uploadBlobs } from './api.js';
+import { attachRecorder } from './recorder.js';
+import { attachPresetControls } from './presets.js';
 
 class Sound {
     constructor(url, name) {
@@ -114,11 +75,7 @@ window.addEventListener('load', async () => {
     document.documentElement.style.setProperty('--pad-font', "'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace");
 
 
-    async function fetchPresets() {
-        const r = await fetch(`${API_BASE}/api/presets`);
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return await r.json();
-    }
+    // fetchPresets provided by ./api.mjs
     function soundsFromPreset(p) {
         const saved = loadAllTrims();
         return (p.samples || [])
@@ -139,241 +96,14 @@ window.addEventListener('load', async () => {
     let currentBuffer = null;
 
     const recordBtn = document.getElementById('recordBtn');
-    let _mediaStream = null;
-    let _mediaRecorder = null;
 
-    async function stopAndProcessRecording(chunks) {
-        try {
-            const blob = new Blob(chunks, { type: chunks[0]?.type || 'audio/webm' });
-            const ab = await blob.arrayBuffer();
-            const decoded = await ctx.decodeAudioData(ab);
-            const url = URL.createObjectURL(blob);
-            if (currentIndex >= 0 && sounds[currentIndex]) {
-                sounds[currentIndex].buffer = decoded;
-                sounds[currentIndex].ready = true;
-                sounds[currentIndex].blob = blob;
-                sounds[currentIndex].url = url;
-                sounds[currentIndex].name = sounds[currentIndex].name || 'Mic recording';
-                engine.setBuffers(sounds.map(s => s.buffer));
-                if (gui) {
-                    gui.setReady(currentIndex, true);
-                    gui.setProgress(currentIndex, 1);
-                    gui.selectPad(currentIndex);
-                }
-                status.textContent = 'Recording saved to selected pad';
-            } else {
-                const snd = new Sound(url, 'Mic recording');
-                snd.buffer = decoded; snd.ready = true; snd.blob = blob;
-                sounds.push(snd);
-                engine.setBuffers(sounds.map(s => s.buffer));
-                if (gui) {
-                    gui.buildPads(sounds);
-                    const newIndex = sounds.length - 1;
-                    gui.selectPad(newIndex);
-                    gui.setReady(newIndex, true);
-                }
-                status.textContent = 'Recording added as new pad';
-            }
-        } catch (e) {
-            status.textContent = 'Failed to process recording';
-        }
-    }
+    // Preset save/delete provided by ./presets.mjs
 
-    if (recordBtn) {
-        recordBtn.onclick = async () => {
-            if (_mediaRecorder && _mediaRecorder.state === 'recording') {
-                _mediaRecorder.stop();
-                recordBtn.textContent = 'Record to Pad';
-                return;
-            }
-            try {
-                _mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            } catch (e) {
-                status.textContent = 'Microphone access denied';
-                return;
-            }
-            const chunks = [];
-            try {
-                _mediaRecorder = new MediaRecorder(_mediaStream);
-            } catch (e) {
-                status.textContent = 'Recording not supported in this browser';
-                _mediaStream.getTracks().forEach(t => t.stop());
-                _mediaStream = null;
-                return;
-            }
-            _mediaRecorder.ondataavailable = (ev) => { if (ev.data && ev.data.size) chunks.push(ev.data); };
-            _mediaRecorder.onstop = async () => {
-                await stopAndProcessRecording(chunks);
-                if (_mediaStream) _mediaStream.getTracks().forEach(t => t.stop());
-                _mediaStream = null; _mediaRecorder = null;
-            };
-            _mediaRecorder.start();
-            recordBtn.textContent = 'Stop Recording';
-            status.textContent = 'Recording…';
-        };
-    }
-
-    // Save preset flow
-    const saveBtn = document.getElementById('savePresetBtn');
-    function slugify(s) {
-        return (s || '').toString().normalize('NFKD').replace(/[^a-zA-Z0-9]+/g, '-').replace(/(^-|-$)+/g, '').toLowerCase();
-    }
-
-    async function uploadBlobs(folder, blobs) {
-        // blobs: [{ blob, filename }]
-        const fd = new FormData();
-        for (const b of blobs) fd.append('files', b.blob, b.filename);
-        const res = await fetch(`${API_BASE}/api/upload/${encodeURIComponent(folder)}`, { method: 'POST', body: fd });
-        if (!res.ok) throw new Error('Upload failed');
-        return await res.json(); // { uploaded, files: [ { originalName, storedName, size, url } ] }
-    }
-
-    if (saveBtn) {
-        saveBtn.onclick = async () => {
-            const name = (prompt('Enter a name for the new preset') || '').trim();
-            if (!name) return;
-            saveBtn.disabled = true; globalStatus.textContent = 'Saving…';
-            try {
-                const folder = slugify(name) || 'preset';
-                // Build blobs list with index so we can replace urls after upload
-                const blobs = [];
-                const samples = Array.from({ length: sounds.length }, (_, i) => ({ name: sounds[i]?.name || `sample${i}`, url: sounds[i]?.url }));
-                for (let i = 0; i < sounds.length; i++) {
-                    const s = sounds[i];
-                    if (s && s.blob) {
-                        const sampleName = s.name || `sample${i}`;
-                        const filename = `${i}-${sampleName.replace(/[^a-z0-9\.\-]/gi, '_')}.webm`;
-                        blobs.push({ index: i, blob: s.blob, filename });
-                        // placeholder url; will replace after upload
-                        samples[i] = { name: sampleName, url: `/presets/${folder}/${filename}` };
-                    }
-                }
-
-                // upload blobs if any and patch sample URLs from server response
-                if (blobs.length) {
-                    const uploadRes = await uploadBlobs(folder, blobs);
-                    if (uploadRes && Array.isArray(uploadRes.files)) {
-                        const map = new Map(uploadRes.files.map(f => [f.storedName, f.url]));
-                        for (const b of blobs) {
-                            const stored = map.get(b.filename);
-                            if (stored) samples[b.index].url = stored;
-                        }
-                    }
-                }
-
-                const preset = {
-                    name,
-                    type: 'sampler',
-                    isFactoryPresets: false,
-                    samples
-                };
-
-                const r = await fetch(`${API_BASE}/api/presets`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(preset) });
-                if (r.status === 201) {
-                    globalStatus.textContent = 'Preset saved successfully';
-                    try {
-                        const newPresets = await fetchPresets();
-                        presetSelect.innerHTML = '';
-                        newPresets.forEach((p, idx) => {
-                            const opt = document.createElement('option');
-                            opt.value = p.name; opt.textContent = p.name; if (idx === 0) opt.selected = true;
-                            presetSelect.appendChild(opt);
-                        });
-                        presetSelect.value = name;
-                        if (deleteBtnElem) deleteBtnElem.disabled = isProtectedPreset(name);
-                        const sel = newPresets.find(x => x.name === name);
-                        if (sel) await buildFromPreset(sel);
-                    } catch (e) {
-                        console.error('refresh after save failed', e);
-                    }
-                } else if (r.status === 409) {
-                    // prompt to overwrite
-                    const overwrite = confirm('A preset with this name already exists. Overwrite it?');
-                    if (overwrite) {
-                        const putRes = await fetch(`${API_BASE}/api/presets/${encodeURIComponent(name)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(preset) });
-                        if (putRes.ok) {
-                            globalStatus.textContent = 'Preset overwritten successfully';
-                            try {
-                                const newPresets = await fetchPresets();
-                                presetSelect.innerHTML = '';
-                                newPresets.forEach((p, idx) => {
-                                    const opt = document.createElement('option');
-                                    opt.value = p.name; opt.textContent = p.name; if (idx === 0) opt.selected = true;
-                                    presetSelect.appendChild(opt);
-                                });
-                                presetSelect.value = name;
-                                if (deleteBtnElem) deleteBtnElem.disabled = isProtectedPreset(name);
-                                const sel = newPresets.find(x => x.name === name);
-                                if (sel) await buildFromPreset(sel);
-                            } catch (e) {
-                                console.error('refresh after overwrite failed', e);
-                            }
-                        } else {
-                            const txt = await putRes.text();
-                            globalStatus.textContent = 'Failed to overwrite preset: ' + txt;
-                        }
-                    } else {
-                        globalStatus.textContent = 'Preset not saved (name exists)';
-                    }
-                } else {
-                    const txt = await r.text();
-                    globalStatus.textContent = 'Failed to save preset: ' + txt;
-                }
-            } catch (e) {
-                globalStatus.textContent = 'Save failed: ' + (e && e.message ? e.message : e);
-            } finally {
-                saveBtn.disabled = false; setTimeout(() => { globalStatus.textContent = ''; }, 2000);
-            }
-        };
-    }
-
-    // Delete preset
     const deleteBtn = document.getElementById('deletePresetBtn');
-    if (deleteBtn) {
-        deleteBtn.onclick = async () => {
-            const name = presetSelect.value;
-                if (!name) return;
-                
-            const ok = confirm(`Delete preset "${name}"? This cannot be undone.`);
-            if (!ok) return;
-            deleteBtn.disabled = true; globalStatus.textContent = 'Deleting...';
-            try {
-                const res = await fetch(`${API_BASE}/api/presets/${encodeURIComponent(name)}`, { method: 'DELETE' });
-                if (res.status === 204 || res.ok) {
-                    globalStatus.textContent = 'Preset deleted';
-                    // refresh presets list and UI
-                    try {
-                        const newPresets = await fetchPresets();
-                        presetSelect.innerHTML = '';
-                        newPresets.forEach((p, idx) => {
-                            const opt = document.createElement('option');
-                            opt.value = p.name; opt.textContent = p.name; if (idx === 0) opt.selected = true;
-                            presetSelect.appendChild(opt);
-                        });
-                        if (deleteBtnElem) deleteBtnElem.disabled = initialPresetNames.has(presetSelect.value);
-                        if (newPresets.length) {
-                            await buildFromPreset(newPresets[0]);
-                        } else {
-                            // clear UI
-                            sounds.splice(0, sounds.length);
-                            engine.setBuffers([]);
-                            if (gui) gui.buildPads([]);
-                            wf.clearCanvas(); status.textContent = '';
-                        }
-                    } catch (e) {
-                        console.error('refresh after delete failed', e);
-                    }
-                } else {
-                    const txt = await res.text();
-                    globalStatus.textContent = 'Delete failed: ' + txt;
-                }
-            } catch (e) {
-                globalStatus.textContent = 'Delete failed: ' + (e && e.message ? e.message : e);
-            } finally {
-                deleteBtn.disabled = false; setTimeout(() => { globalStatus.textContent = ''; }, 2000);
-            }
-        };
-    }
+
+    // Attach recorder and preset handlers (use getters so they see updated `gui` and `sounds`).
+    attachRecorder({ recordBtn, getCtx: () => ctx, getSounds: () => sounds, getGui: () => gui, getCurrentIndex: () => currentIndex, engine, status });
+    attachPresetControls({ saveBtn: document.getElementById('savePresetBtn'), deleteBtn, presetSelect, getSounds: () => sounds, getGui: () => gui, buildFromPreset, isProtectedPreset, statusElem: status, globalStatus, engine });
 
     function syncCanvasSizeAndRedraw() {
         if (!canvasWrapper) return;
