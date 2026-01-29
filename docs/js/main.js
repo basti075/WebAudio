@@ -215,7 +215,7 @@ window.addEventListener('load', async () => {
 
     // presets
     try {
-        const presets = await fetchPresets();
+        let presets = await fetchPresets();
         presetSelect.innerHTML = '';
 
         // capture the list of presets that exist now (kept for reference)
@@ -233,6 +233,15 @@ window.addEventListener('load', async () => {
         if (deleteBtnElem) deleteBtnElem.disabled = isProtectedPreset(presets[0]?.name);
 
         await buildFromPreset(presets[0]);
+
+        // update local presets when modules refresh the list
+        window.addEventListener('presets:updated', (e) => {
+            try {
+                if (e && e.detail && Array.isArray(e.detail.presets)) {
+                    presets = e.detail.presets;
+                }
+            } catch (er) { /* ignore */ }
+        });
         // If running in headless mode, hide UI and run a non-interactive load of all samples.
         if (headlessMode) {
             try {
@@ -269,6 +278,17 @@ window.addEventListener('load', async () => {
             const p = presets.find(x => x.name === presetSelect.value);
             if (deleteBtnElem) deleteBtnElem.disabled = isProtectedPreset(presetSelect.value);
             if (p) await buildFromPreset(p);
+            else {
+                // fallback: try to fetch current list and load if found
+                try {
+                    const fresh = await fetchPresets();
+                    const found = fresh.find(x => x.name === presetSelect.value);
+                    if (found) {
+                        presets = fresh;
+                        await buildFromPreset(found);
+                    }
+                } catch (e) { console.error('failed to refresh presets on change', e); }
+            }
         };
     } catch (e) {
         console.error('fetchPresets failed', e);

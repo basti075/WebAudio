@@ -43,6 +43,8 @@ export function attachPresetControls({ saveBtn, deleteBtn, presetSelect, getSoun
                         presetSelect.value = name;
                         if (deleteBtn) deleteBtn.disabled = isProtectedPreset(name);
                         const sel = newPresets.find(x => x.name === name);
+                        // notify listeners that presets list changed
+                        window.dispatchEvent(new CustomEvent('presets:updated', { detail: { presets: newPresets } }));
                         if (sel) await buildFromPreset(sel);
                     } catch (e) { console.error('refresh after save failed', e); }
                 } else if (r.status === 409) {
@@ -60,6 +62,8 @@ export function attachPresetControls({ saveBtn, deleteBtn, presetSelect, getSoun
                                 presetSelect.value = name;
                                 if (deleteBtn) deleteBtn.disabled = isProtectedPreset(name);
                                 const sel = newPresets.find(x => x.name === name);
+                                // notify listeners that presets list changed
+                                window.dispatchEvent(new CustomEvent('presets:updated', { detail: { presets: newPresets } }));
                                 if (sel) await buildFromPreset(sel);
                             } catch (e) { console.error('refresh after overwrite failed', e); }
                         } else {
@@ -86,12 +90,14 @@ export function attachPresetControls({ saveBtn, deleteBtn, presetSelect, getSoun
             deleteBtn.disabled = true; globalStatus.textContent = 'Deleting...';
             try {
                 const res = await fetch(`${API_BASE}/api/presets/${encodeURIComponent(name)}`, { method: 'DELETE' });
-                if (res.status === 204 || res.ok) {
+                    if (res.status === 204 || res.ok) {
                     globalStatus.textContent = 'Preset deleted';
                     try {
                         const newPresets = await fetchPresets();
                         presetSelect.innerHTML = '';
                         newPresets.forEach((p, idx) => { const opt = document.createElement('option'); opt.value = p.name; opt.textContent = p.name; if (idx === 0) opt.selected = true; presetSelect.appendChild(opt); });
+                        // notify listeners that presets list changed
+                        window.dispatchEvent(new CustomEvent('presets:updated', { detail: { presets: newPresets } }));
                         if (deleteBtn) deleteBtn.disabled = isProtectedPreset(presetSelect.value);
                         if (newPresets.length) { await buildFromPreset(newPresets[0]); } else {
                             const sounds = getSounds(); sounds.splice(0, sounds.length); engine.setBuffers([]); if (getGui()) getGui().buildPads([]);
