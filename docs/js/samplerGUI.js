@@ -12,6 +12,9 @@ export class SamplerGUI {
     buildPads(sounds) {
         this.root.innerHTML = '';
         this._pads = [];
+        // Place pads so that sound index 0 is bottom-left, then left→right, bottom→top.
+        const COLS = 4;
+        const rowCount = Math.max(1, Math.ceil(sounds.length / COLS));
         sounds.forEach((s, idx) => {
             const div = document.createElement('div');
             div.className = 'pad';
@@ -21,6 +24,13 @@ export class SamplerGUI {
             div.innerHTML = `
                 <div class="progress" aria-hidden="true"><div class="bar"></div></div>
                 <span class="name">${s.name || 'Sample'}</span>`;
+            // Compute grid placement so index 0 is bottom-left.
+            const col = (idx % COLS) + 1; // 1-based
+            const rowFromBottom = Math.floor(idx / COLS);
+            const row = rowCount - rowFromBottom; // grid rows start at 1 (top=1)
+            div.style.gridColumnStart = String(col);
+            div.style.gridRowStart = String(row);
+
             div.addEventListener('click', () => this.onPad(idx));
             div.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
