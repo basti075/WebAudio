@@ -394,7 +394,37 @@ window.addEventListener('load', async () => {
     async function buildFromPreset(p) {
         status.textContent = `Loading "${p.name}"...`;
         const list = soundsFromPreset(p);
-        // build GUI 
+        // If running headless, skip GUI creation and DOM updates.
+        if (headlessMode) {
+            try {
+                // hide entire UI
+                document.body.style.display = 'none';
+            } catch (e) { /* ignore */ }
+            // load into sounds array and decode buffers without GUI progress
+            sounds.splice(0, sounds.length, ...list);
+            const results = await Promise.allSettled(list.map(async (s) => {
+                try {
+                    s.buffer = await loadBuffer(s.url, ctx, () => {});
+                    s.ready = !!s.buffer;
+                    return s;
+                } catch (e) {
+                    return s;
+                }
+            }));
+            engine.setBuffers(sounds.map(s => s.buffer));
+            const okCount = results.filter(r => r.status === 'fulfilled').length;
+            status.textContent = `Preset "${p.name}" loaded (${okCount}/${list.length})`;
+            // signal headless completion so external test runners can detect success
+            try {
+                const out = { preset: p.name, loaded: okCount, total: list.length };
+                console.log('HEADLESS_DONE', out);
+                window.__HEADLESS_RESULT = out;
+                window.dispatchEvent(new CustomEvent('headless:done', { detail: out }));
+            } catch (e) { /* ignore */ }
+            return;
+        }
+
+        // build GUI
         gui = new SamplerGUI(padsRoot, waveCanvas, waveOverlay, tr, (i) => {
             gui.selectPad(i);
             const buf = sounds[i].buffer;

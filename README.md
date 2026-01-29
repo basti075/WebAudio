@@ -28,8 +28,10 @@
 
 ## Headless mode
 
-- The UI supports a headless/testing mode that hides the interactive controls and performs a non-interactive load of the first preset and its samples.
-- Enable headless mode by opening the page with the query parameter `?headless=1` (or `?headless=true`) or by appending `#headless` to the URL.
-- When finished the page logs a completion object as `HEADLESS_DONE` in the console, stores the result at `window.__HEADLESS_RESULT`, and dispatches a `headless:done` event.
+- Headless mode runs the page in a non-interactive test mode. Use `?headless=1`, `?headless=true` or `#headless` on the URL to enable it.
+- Behavior:
+   - The UI is hidden and no DOM-based controls are created.
+   - The page automatically loads the first preset, decodes all samples, and sets the engine buffers.
+   - On completion it logs `HEADLESS_DONE` to the console and sets `window.__HEADLESS_RESULT` to an object `{ preset, loaded, total }`, and dispatches a `headless:done` event with the same detail.
 - Example link: https://basti075.github.io/WebAudio/?headless=1
 
