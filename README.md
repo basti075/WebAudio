@@ -9,7 +9,12 @@
    - Load samples, use the trim/play controls and the waveform view to edit and play sounds.
    - The UI communicates with the REST endpoint for sample listing/loading and any server-backed operations.
 
-3. MIDI control:
+3. Recording & presets
+   - You can record audio from your microphone directly into pads using the "Record to Pad" button.
+   - After recording you can "Save Preset" to upload the recorded samples and preset JSON to the server; the new preset will appear in the preset dropdown and can be loaded immediately.
+   - Note: the example backend is hosted on Render and uses the instance filesystem for uploaded files (stored under `public/presets`).
+
+4. MIDI control:
    - A MIDI device can be used to control the pads. Connect your MIDI controller to the computer before opening the UI.
    - The browser may request permission to access MIDI devices; use a browser with Web MIDI API support (for example, Chrome or Edge).
    - Once connected, MIDI notes or CCs mapped by the UI will trigger pad playback and controls.
