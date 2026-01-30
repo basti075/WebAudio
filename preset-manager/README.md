@@ -4,8 +4,8 @@ Application Angular pour la gestion des presets audio du projet Sampler (M1 INFO
 
 ## Auteurs
 
-- **[Ton nom]** - Partie Angular (ce projet)
-- **[Nom du binôme]** - Partie Sampler + Backend
+- **[Stevenson JULES]**
+- **[Bastian Holzer]**
 
 ## Fonctionnalités
 
@@ -112,21 +112,7 @@ private apiUrl = 'http://localhost:3000/api';
 | PUT | `/api/presets/:name` | Met à jour un preset |
 | DELETE | `/api/presets/:name` | Supprime un preset |
 
-## Utilisation de l'IA
 
-Ce projet a été développé avec l'assistance de **Claude Code** (Anthropic) pour :
-
-- Correction du bug Zone.js pour le SSR
-- Adaptation du modèle Preset au format de l'API backend
-- Mise en place de la gestion d'erreurs HTTP
-- Création des formulaires d'édition et de création
-- Styling des composants avec Angular Material
-
-### Prompts principaux utilisés
-
-1. "Vérifie si tout fonctionne, j'ai essayé de le lancer ça ne marchait pas"
-2. "La liste des presets n'est pas affichée sur le site"
-3. "Est-ce que la fonction edit et ajouter preset fonctionnent correctement?"
 
 ## Scripts disponibles
 
