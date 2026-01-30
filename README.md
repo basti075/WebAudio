@@ -23,9 +23,6 @@
    - The browser may request permission to access MIDI devices; use a browser with Web MIDI API support (for example, Chrome or Edge).
    - Once connected, MIDI notes or CCs mapped by the UI will trigger pad playback and controls.
 
-## Requirements
- - A browser with Web MIDI API support if you want to use a MIDI controller (e.g., Chrome, Edge).
-
 ## Headless mode
 
 - Headless mode runs the page in a non-interactive test mode. Use `?headless=1`, `?headless=true` or `#headless` on the URL to enable it.

@@ -6,6 +6,7 @@ import { MidiManager } from './midi.js';
 import { API_BASE, resolveUrl, downloadArrayBufferWithProgress, loadBuffer, fetchPresets, uploadBlobs } from './api.js';
 import { attachRecorder } from './recorder.js';
 import { attachPresetControls } from './presets.js';
+import { bindKeyboardToPads } from './keyboardMapper.js';
 
 class Sound {
     constructor(url, name) {
@@ -365,6 +366,16 @@ window.addEventListener('load', async () => {
         const btn = padsRoot.querySelectorAll('.pad')[padIndex];
         if (btn) btn.click();
     });
+
+    // Computer keyboard mapping: 1-4 / qwer / asdf / yxcv → pads 0..15
+    // Bind keys to trigger pad button clicks (mirrors MIDI note-on behavior)
+    const _unbindKeyboard = bindKeyboardToPads((padIndex) => {
+        const btn = padsRoot.querySelectorAll('.pad')[padIndex];
+        if (btn) btn.click();
+    }, { preventDefault: true });
+
+    // Remove binding on unload to avoid leaks
+    window.addEventListener('unload', () => { try { _unbindKeyboard(); } catch (e) { /* ignore */ } });
 
     midiEnableBtn.onclick = async () => {
         try {
