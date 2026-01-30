@@ -1,0 +1,28 @@
+<!-- Barre de navigation -->
+<mat-toolbar color="primary" class="navbar">
+  <mat-icon class="logo-icon">music_note</mat-icon>
+  <span class="title">{{ title }}</span>
+  
+  <span class="spacer"></span>
+  
+  <button mat-button routerLink="/presets" routerLinkActive="active">
+    <mat-icon>list</mat-icon>
+    Presets
+  </button>
+  
+  <button mat-button routerLink="/presets/new" routerLinkActive="active">
+    <mat-icon>add</mat-icon>
+    Nouveau
+  </button>
+</mat-toolbar>
+
+<!-- Contenu principal (router outlet) -->
+<main>
+  <router-outlet></router-outlet>
+</main>
+
+<!-- Footer -->
+<footer>
+  <p>🎵 Preset Manager - Projet Angular M1 Info 2025-2026</p>
+  <p>Par: Stevenson Jules & Bastian Holzer</p>
+</footer>

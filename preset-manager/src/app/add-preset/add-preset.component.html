@@ -1,0 +1,130 @@
+<div class="container">
+  <h1>✨ Nouveau Preset</h1>
+
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Créer un nouveau preset</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form class="create-form">
+
+        <!-- Nom du preset -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Nom du preset</mat-label>
+          <input
+            matInput
+            [(ngModel)]="newPresetName"
+            name="name"
+            placeholder="Ex: Mon Super Preset"
+            required
+          >
+          <mat-icon matPrefix>music_note</mat-icon>
+          <mat-hint>Obligatoire</mat-hint>
+        </mat-form-field>
+
+        <!-- Type (optionnel) -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Type (optionnel)</mat-label>
+          <input
+            matInput
+            [(ngModel)]="newPresetType"
+            name="type"
+            placeholder="Ex: Drumkit, Piano, Bass, Synth"
+          >
+          <mat-icon matPrefix>category</mat-icon>
+          <mat-hint>Optionnel - pour organiser vos presets</mat-hint>
+        </mat-form-field>
+
+        <!-- Liste des sons -->
+        <div class="samples-section">
+          <h3>
+            <mat-icon>audiotrack</mat-icon>
+            Sons ({{ newSamples.length }})
+          </h3>
+          <p class="hint">Ajoutez les sons avec leur nom et URL</p>
+
+          <div class="samples-list">
+            <div *ngFor="let sample of newSamples; let i = index" class="sample-item">
+              <div class="sample-fields">
+                <mat-form-field appearance="outline" class="sample-name">
+                  <mat-label>Nom du son</mat-label>
+                  <input
+                    matInput
+                    [(ngModel)]="newSamples[i].name"
+                    [name]="'sampleName' + i"
+                    placeholder="Ex: kick, snare"
+                  >
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="sample-url">
+                  <mat-label>URL du fichier</mat-label>
+                  <input
+                    matInput
+                    [(ngModel)]="newSamples[i].url"
+                    [name]="'sampleUrl' + i"
+                    placeholder="Ex: ./sounds/kick.wav"
+                  >
+                </mat-form-field>
+              </div>
+
+              <button
+                mat-icon-button
+                color="warn"
+                (click)="removeSampleField(i)"
+                type="button"
+                [disabled]="newSamples.length === 1"
+                title="Supprimer ce son"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+
+          <button
+            mat-stroked-button
+            color="primary"
+            (click)="addSampleField()"
+            type="button"
+            class="add-sample-btn"
+          >
+            <mat-icon>add</mat-icon>
+            Ajouter un son
+          </button>
+        </div>
+
+        <!-- Info importante -->
+        <div class="info-box">
+          <mat-icon>info</mat-icon>
+          <p>
+            <strong>Note :</strong> Les fichiers audio doivent être accessibles depuis le serveur.
+            Utilisez des chemins relatifs (ex: <code>./mon-kit/kick.wav</code>) ou des URLs complètes.
+          </p>
+        </div>
+
+        <!-- Boutons d'action -->
+        <div class="form-actions">
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="onCreate()"
+            type="button"
+          >
+            <mat-icon>add</mat-icon>
+            Créer le Preset
+          </button>
+
+          <button
+            mat-stroked-button
+            (click)="onCancel()"
+            type="button"
+          >
+            <mat-icon>cancel</mat-icon>
+            Annuler
+          </button>
+        </div>
+
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

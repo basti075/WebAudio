@@ -1,0 +1,133 @@
+<div class="container">
+  <h1>✏️ Éditer le Preset</h1>
+
+  <!-- Message de chargement -->
+  <div *ngIf="loading" class="loading">
+    Chargement du preset...
+  </div>
+
+  <!-- Formulaire d'édition -->
+  <mat-card *ngIf="!loading && preset">
+    <mat-card-header>
+      <mat-card-title>{{ preset.name }}</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form class="edit-form">
+
+        <!-- Nom du preset -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Nom du preset</mat-label>
+          <input
+            matInput
+            [(ngModel)]="editedName"
+            name="name"
+            placeholder="Ex: Mon Super Preset"
+            required
+          >
+          <mat-icon matPrefix>music_note</mat-icon>
+        </mat-form-field>
+
+        <!-- Type/Catégorie -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Type (optionnel)</mat-label>
+          <input
+            matInput
+            [(ngModel)]="editedType"
+            name="type"
+            placeholder="Ex: Drumkit, Piano, Bass"
+          >
+          <mat-icon matPrefix>category</mat-icon>
+        </mat-form-field>
+
+        <!-- Liste des sons -->
+        <div class="samples-section">
+          <h3>
+            <mat-icon>audiotrack</mat-icon>
+            Sons ({{ editedSamples.length }})
+          </h3>
+
+          <div class="samples-list">
+            <div *ngFor="let sample of editedSamples; let i = index" class="sample-item">
+              <div class="sample-fields">
+                <mat-form-field appearance="outline" class="sample-name">
+                  <mat-label>Nom du son</mat-label>
+                  <input
+                    matInput
+                    [(ngModel)]="editedSamples[i].name"
+                    [name]="'sampleName' + i"
+                    placeholder="Ex: kick, snare"
+                  >
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="sample-url">
+                  <mat-label>URL du fichier</mat-label>
+                  <input
+                    matInput
+                    [(ngModel)]="editedSamples[i].url"
+                    [name]="'sampleUrl' + i"
+                    placeholder="Ex: ./sounds/kick.wav"
+                  >
+                </mat-form-field>
+              </div>
+
+              <button
+                mat-icon-button
+                color="warn"
+                (click)="removeSample(i)"
+                type="button"
+                title="Supprimer ce son"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+
+          <button
+            mat-stroked-button
+            color="primary"
+            (click)="addSample()"
+            type="button"
+            class="add-sample-btn"
+          >
+            <mat-icon>add</mat-icon>
+            Ajouter un son
+          </button>
+        </div>
+
+        <!-- Boutons d'action -->
+        <div class="form-actions">
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="onSave()"
+            type="button"
+          >
+            <mat-icon>save</mat-icon>
+            Sauvegarder
+          </button>
+
+          <button
+            mat-stroked-button
+            (click)="onCancel()"
+            type="button"
+          >
+            <mat-icon>cancel</mat-icon>
+            Annuler
+          </button>
+        </div>
+
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Message si preset non trouvé -->
+  <mat-card *ngIf="!loading && !preset" class="error-card">
+    <mat-card-content>
+      <p>❌ Preset non trouvé</p>
+      <button mat-raised-button routerLink="/presets">
+        Retour à la liste
+      </button>
+    </mat-card-content>
+  </mat-card>
+</div>

@@ -1,0 +1,124 @@
+.container {
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #3f51b5;
+}
+
+.actions {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 18px;
+  color: #666;
+}
+
+.presets-card {
+  margin-top: 20px;
+}
+
+.no-presets {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.no-presets p {
+  margin: 10px 0;
+}
+
+/* Liste des presets */
+.presets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 0;
+}
+
+.preset-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background-color: #fafafa;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.preset-item:hover {
+  background-color: #f0f0f0;
+}
+
+.preset-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preset-name {
+  font-size: 18px;
+  font-weight: 500;
+  color: #333;
+}
+
+.preset-tags {
+  display: flex;
+  gap: 8px;
+}
+
+.preset-tag {
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.preset-tag.type {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.preset-tag.samples {
+  background-color: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.preset-actions {
+  display: flex;
+  gap: 4px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .container {
+    padding: 10px;
+  }
+
+  h1 {
+    font-size: 24px;
+  }
+
+  .preset-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .preset-actions {
+    align-self: flex-end;
+  }
+
+  .preset-name {
+    font-size: 16px;
+  }
+}

@@ -1,0 +1,70 @@
+<div class="container">
+  <h1>🎵 Gestion des Presets</h1>
+
+  <!-- Bouton pour créer un nouveau preset -->
+  <div class="actions">
+    <button
+      mat-raised-button
+      color="primary"
+      routerLink="/presets/new"
+    >
+      <mat-icon>add</mat-icon>
+      Nouveau Preset
+    </button>
+  </div>
+
+  <!-- Message de chargement -->
+  <div *ngIf="loading" class="loading">
+    Chargement des presets...
+  </div>
+
+  <!-- Liste des presets -->
+  <mat-card *ngIf="!loading" class="presets-card">
+    <mat-card-header>
+      <mat-card-title>📋 Presets disponibles ({{ presets.length }})</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Si aucun preset -->
+      <div *ngIf="presets.length === 0" class="no-presets">
+        <p>Aucun preset disponible.</p>
+        <p>Cliquez sur "Nouveau Preset" pour en créer un.</p>
+      </div>
+
+      <!-- Liste des presets -->
+      <div *ngIf="presets.length > 0" class="presets-list">
+        <div *ngFor="let preset of presets" class="preset-item">
+          <!-- Nom du preset et infos -->
+          <div class="preset-info">
+            <span class="preset-name">{{ preset.name }}</span>
+            <div class="preset-tags">
+              <span class="preset-tag type">{{ getPresetType(preset) }}</span>
+              <span class="preset-tag samples">{{ preset.samples.length }} sons</span>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="preset-actions">
+            <button
+              mat-icon-button
+              color="primary"
+              [routerLink]="['/presets', preset.name]"
+              title="Voir les détails / Éditer"
+            >
+              <mat-icon>edit</mat-icon>
+            </button>
+
+            <button
+              mat-icon-button
+              color="warn"
+              (click)="deletePreset(preset)"
+              title="Supprimer ce preset"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>
