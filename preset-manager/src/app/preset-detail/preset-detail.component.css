@@ -1,0 +1,116 @@
+.container {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #3f51b5;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 18px;
+  color: #666;
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px 0;
+}
+
+.full-width {
+  width: 100%;
+}
+
+/* Section des sons */
+.samples-section {
+  margin-top: 20px;
+}
+
+.samples-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  color: #555;
+}
+
+.samples-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.sample-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sample-fields {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+}
+
+.sample-name {
+  flex: 1;
+}
+
+.sample-url {
+  flex: 2;
+}
+
+.add-sample-btn {
+  width: 100%;
+}
+
+/* Boutons d'action */
+.form-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+.form-actions button {
+  min-width: 150px;
+}
+
+/* Carte d'erreur */
+.error-card {
+  text-align: center;
+  padding: 40px;
+}
+
+.error-card p {
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .container {
+    padding: 10px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+
+  .sample-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

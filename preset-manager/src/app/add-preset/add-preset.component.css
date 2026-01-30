@@ -1,0 +1,138 @@
+.container {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #3f51b5;
+}
+
+.create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px 0;
+}
+
+.full-width {
+  width: 100%;
+}
+
+/* Section des sons */
+.samples-section {
+  margin-top: 20px;
+}
+
+.samples-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: #555;
+}
+
+.samples-section .hint {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.samples-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.sample-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sample-fields {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+}
+
+.sample-name {
+  flex: 1;
+}
+
+.sample-url {
+  flex: 2;
+}
+
+.add-sample-btn {
+  width: 100%;
+}
+
+/* Boîte d'information */
+.info-box {
+  display: flex;
+  gap: 10px;
+  padding: 15px;
+  background-color: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  border-radius: 4px;
+  margin: 20px 0;
+}
+
+.info-box mat-icon {
+  color: #2196f3;
+  flex-shrink: 0;
+}
+
+.info-box p {
+  margin: 0;
+  font-size: 14px;
+  color: #555;
+}
+
+.info-box code {
+  background-color: #fff;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  color: #d32f2f;
+}
+
+/* Boutons d'action */
+.form-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+.form-actions button {
+  min-width: 150px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .container {
+    padding: 10px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+
+  .sample-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .info-box {
+    flex-direction: column;
+  }
+}
