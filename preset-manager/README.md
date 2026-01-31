@@ -1,127 +1,114 @@
-# Preset Manager - Application Angular
+# Preset Manager - Angular Application
 
-Application Angular pour la gestion des presets audio du projet Sampler (M1 INFO 2025-2026).
+Angular application for managing audio presets in the Sampler project.
 
-## Auteurs
+## Authors
 
 - **[Stevenson JULES]**
 - **[Bastian Holzer]**
 
-## Fonctionnalités
+## Features
 
-### Obligatoires (toutes implémentées)
+### Required (all implemented)
 
-- [x] **Liste des presets** : Affichage de tous les presets avec leur type et nombre de sons
-- [x] **Édition de preset** : Modification du nom, type et liste des samples
-- [x] **Renommage** : Possibilité de renommer un preset existant
+- [x] **Preset list**: Display all presets with their type and number of sounds
+- [x] **Preset editing**: Modify name, type and sample list
+- [x] **Renaming**: Ability to rename an existing preset
 
-### Optionnelles (implémentées)
+### Optional (implemented)
 
-- [x] **Suppression de preset** : Suppression avec confirmation
-- [x] **Création de preset** : Formulaire pour créer un nouveau preset avec nom, type et URLs des sons
+- [x] **Preset deletion**: Deletion with confirmation
+- [x] **Preset creation**: Form to create a new preset with name, type and sound URLs
 
-### Non implémentées
+### Not implemented
 
-- [ ] Upload de fichiers audio lors de la création d'un preset
+- [ ] Audio file upload during preset creation
 
-## Technologies utilisées
+## Technologies used
 
-- **Angular 21** avec composants standalone
-- **Angular Material** pour l'interface utilisateur
-- **RxJS** pour la gestion des requêtes HTTP
+- **Angular 21** with standalone components
+- **Angular Material** for the user interface
+- **RxJS** for HTTP request management
 - **TypeScript 5.9**
 
-## Structure du projet
+## Project structure
 
 ```
 src/app/
-├── presets/                    # Page liste des presets
+├── presets/                    # Preset list page
 │   ├── presets.component.ts
 │   ├── presets.component.html
 │   └── presets.component.css
-├── preset-detail/              # Page édition d'un preset
+├── preset-detail/              # Preset editing page
 │   ├── preset-detail.component.ts
 │   ├── preset-detail.component.html
 │   └── preset-detail.component.css
-├── add-preset/                 # Page création d'un preset
+├── add-preset/                 # Preset creation page
 │   ├── add-preset.component.ts
 │   ├── add-preset.component.html
 │   └── add-preset.component.css
-├── shared/                     # Services et modèles partagés
-│   ├── preset.model.ts         # Modèle Preset et Sample
-│   └── presets.service.ts      # Service HTTP pour l'API
-├── app.routes.ts               # Configuration des routes
-├── app.config.ts               # Configuration de l'application
-└── app.component.ts            # Composant racine
+├── shared/                     # Shared services and models
+│   ├── preset.model.ts         # Preset and Sample models
+│   └── presets.service.ts      # HTTP service for the API
+├── app.routes.ts               # Route configuration
+├── app.config.ts               # Application configuration
+└── app.component.ts            # Root component
 ```
 
 ## Installation
 
-### Prérequis
+### Prerequisites
 
-- **Node.js** v20.19+ ou v22.12+ (obligatoire pour Angular 21)
+- **Node.js** v20.19+ or v22.12+ (required for Angular 21)
 - **npm** v10+
 
-### Étapes
+### Steps
 
 ```bash
-# Cloner le repository
-git clone <url-du-repo>
+# Clone the repository
+git clone <git@github.com:basti075/WebAudio.git>
 cd preset-manager
 
-# Installer les dépendances
+# Install dependencies
 npm install
 
-# Lancer le serveur de développement
+# Start the development server
 npm start
 ```
 
-L'application sera accessible sur `http://localhost:4200`
+The application will be accessible at `http://localhost:4200`
 
-## Configuration du backend
+## Backend configuration
 
-Le service utilise l'API backend déployée sur Render :
+The service uses the backend API deployed on Render:
 
 ```typescript
 // src/app/shared/presets.service.ts
 private apiUrl = 'https://webaudio-22k9.onrender.com/api';
 ```
 
-Pour utiliser un backend local, modifier cette URL :
-
-```typescript
-private apiUrl = 'http://localhost:3000/api';
-```
-
-## Routes de l'application
+## Application routes
 
 | Route | Description |
 |-------|-------------|
-| `/` | Redirige vers `/presets` |
-| `/presets` | Liste de tous les presets |
-| `/presets/new` | Formulaire de création |
-| `/presets/:name` | Édition d'un preset |
+| `/` | Redirects to `/presets` |
+| `/presets` | List of all presets |
+| `/presets/new` | Creation form |
+| `/presets/:name` | Edit a preset |
 
-## API Backend utilisée
+## Backend API used
 
-| Méthode | Endpoint | Description |
+| Method | Endpoint | Description |
 |---------|----------|-------------|
-| GET | `/api/presets` | Liste tous les presets |
-| GET | `/api/presets/:name` | Récupère un preset |
-| POST | `/api/presets` | Crée un nouveau preset |
-| PUT | `/api/presets/:name` | Met à jour un preset |
-| DELETE | `/api/presets/:name` | Supprime un preset |
+| GET | `/api/presets` | List all presets |
+| GET | `/api/presets/:name` | Retrieve a preset |
+| POST | `/api/presets` | Create a new preset |
+| PUT | `/api/presets/:name` | Update a preset |
+| DELETE | `/api/presets/:name` | Delete a preset |
 
-
-
-## Scripts disponibles
+## Available scripts
 
 ```bash
-npm start       # Lance le serveur de développement
-npm run build   # Build de production
-npm test        # Lance les tests unitaires
-```
-
-## Licence
-
-Projet universitaire - M1 INFO 2025-2026
+npm start       # Start the development server
+npm run build   # Production build
+npm test        # Run unit tests

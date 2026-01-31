@@ -18,6 +18,15 @@
    - After recording you can "Save Preset" to upload the recorded samples and preset JSON to the server; the new preset will appear in the preset dropdown and can be loaded immediately.
    - Note: the example backend is hosted on Render and uses the instance filesystem for uploaded files (stored under `public/presets`).
 
+## Angular Preset Manager
+   - The Angular application provides a management interface for presets at `preset-manager/`.
+   - Features: list all presets with type and sample count, create new presets with name/type/sample URLs, edit existing presets (rename, modify samples, change type/category), delete presets with confirmation.
+   - The app communicates with the same REST API endpoint (`/api/presets`) hosted on Render: https://webaudio-22k9.onrender.com/api
+   - Run locally: `cd preset-manager && npm install && npm start` (requires Node.js v20.19+ and npm v10+).
+   - The app will be accessible at `http://localhost:4200`; for local backend testing change the API URL in `presets.service.ts` to `http://localhost:3000/api`.
+   - Technologies: Angular 21 with standalone components, Angular Material for UI, RxJS for HTTP management, TypeScript 5.9.
+   - All preset changes (create, edit, delete) persist on the server and are immediately reflected in the sampler dropdown.
+   
 ## MIDI control:
    - A MIDI device can be used to control the pads. Connect your MIDI controller to the computer before opening the UI.
    - The browser may request permission to access MIDI devices; use a browser with Web MIDI API support (for example, Chrome or Edge).
